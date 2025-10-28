@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zelda Fishing Idle</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="side-counters" style="position:fixed;left:20px;top:50%;transform:translateY(-50%);z-index:2000;display:flex;flex-direction:column;gap:1.5em;align-items:center;">
+    <div id="xp-bar" style="display:flex;align-items:center;gap:0.7em;margin-bottom:0.7em;width:170px;">
+      <div style="position:relative;">
+        <img src="assets/xp.png" alt="xp" class="counter-icon" style="margin-right:0;height:3.5em;" />
+        <span id="xp-level" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P',Arial,sans-serif;font-size:0.85em;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none;">1</span>
+      </div>
+      <div id="xp-progress-container" style="flex:1;height:18px;background:#23283a;border:2px solid #2a2f44;border-radius:7px;overflow:hidden;position:relative;">
+        <div id="xp-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#7de2fc,#b9b6e5 90%);box-shadow:0 0 6px #7de2fc;transition:width 0.3s;position:relative;"></div>
+<span id="xp-progress-text">0/100</span>
+      </div>
+    </div>
+    <div style="background:#23283a;padding:0.8em 1.2em;border:4px solid #181c24;box-shadow:0 0 0 4px #23283a;border-radius:0;display:flex;align-items:center;gap:0.6em;font-family:'Press Start 2P',Arial,sans-serif;font-size:1em;">
+      <img src="assets/coin.png" alt="coin" class="counter-icon" /><span id="coin-count" style="display:inline-block;vertical-align:middle;">0</span>
+    </div>
+    <div style="background:#23283a;padding:0.8em 1.2em;border:4px solid #181c24;box-shadow:0 0 0 4px #23283a;border-radius:0;display:flex;align-items:center;gap:0.6em;font-family:'Press Start 2P',Arial,sans-serif;font-size:1em;">
+      <img src="assets/gem.png" alt="gem" class="counter-icon" /><span id="gem-count" style="display:inline-block;vertical-align:middle;">0</span>
+    </div>
+    <div id="lifetime-fish-container" style="background:#23283a;padding:0.8em 1.2em;border:4px solid #181c24;box-shadow:0 0 0 4px #23283a;border-radius:0;display:flex;align-items:center;gap:0.6em;font-family:'Press Start 2P',Arial,sans-serif;font-size:1em;min-width:100px;">
+      <img src="assets/fish.png" alt="fish" class="counter-icon" /><span id="lifetime-fish-count" style="color:#ffd700;font-size:1.08em;">0</span>
+    </div>
+    <div id="luck-container" style="font-family:'Press Start 2P',Arial,sans-serif;font-size:0.9em;color:#23d160;text-shadow:0 0 8px #23d160;display:flex;align-items:center;gap:0.6em;">
+      <svg width="16" height="16" viewBox="-0.9 -0.9 31.69 31.69" style="filter: drop-shadow(0 0 8px #23d160);">
+        <path fill="#23d160" d="M14.308,13.048c0.355,0.35,0.924,0.35,1.28,0c1.22-1.203,3.813-3.803,4.451-4.792c0.908-1.406,1.812-2.566,1.812-4.591 S20.211,0,18.186,0c-1.416,0-2.63,0.812-3.24,1.987C14.336,0.812,13.123,0,11.707,0C9.682,0,8.042,1.64,8.042,3.665 S8.947,6.85,9.854,8.256C10.495,9.244,13.088,11.845,14.308,13.048z"/>
+        <path fill="#23d160" d="M15.587,16.848c-0.355-0.351-0.925-0.351-1.28,0c-1.22,1.202-3.813,3.804-4.452,4.791 c-0.907,1.406-1.813,2.566-1.813,4.593c0,2.023,1.64,3.663,3.665,3.663c1.416,0,2.63-0.812,3.24-1.985 c0.611,1.175,1.824,1.985,3.24,1.985c2.024,0,3.665-1.64,3.665-3.663c0-2.025-0.904-3.187-1.812-4.593 C19.402,20.65,16.807,18.049,15.587,16.848z"/>
+        <path fill="#23d160" d="M27.908,14.947c1.174-0.61,1.985-1.824,1.985-3.24c0-2.025-1.64-3.665-3.664-3.666c-2.024,0-3.186,0.906-4.592,1.813 c-0.987,0.639-3.59,3.232-4.792,4.452c-0.351,0.355-0.351,0.924,0,1.279c1.202,1.22,3.805,3.813,4.792,4.453 c1.406,0.907,2.566,1.812,4.592,1.812c2.023,0,3.664-1.642,3.664-3.666C29.896,16.771,29.083,15.557,27.908,14.947z"/>
+        <path fill="#23d160" d="M13.048,15.587c0.35-0.354,0.35-0.925,0-1.28c-1.203-1.22-3.804-3.813-4.792-4.452C6.851,8.948,5.69,8.042,3.667,8.042 c-2.025,0-3.665,1.641-3.665,3.666c0,1.416,0.813,2.63,1.987,3.24c-1.175,0.61-1.987,1.823-1.987,3.239 c0,2.023,1.64,3.663,3.665,3.665c2.024,0,3.185-0.905,4.59-1.812C9.245,19.4,11.845,16.807,13.048,15.587z"/>
+      </svg>
+      Luck: <span id="luck-percentage">0</span>%
+    </div>
+    <div id="shiny-pull-container" style="font-family:'Press Start 2P',Arial,sans-serif;font-size:0.8em;color:#ffd700;text-shadow:0 0 8px #ffd700;display:flex;align-items:center;gap:0.5em;margin-top:-0.2em;">
+      <span class="shiny-glow">✨</span>
+      <span class="shiny-glow rainbow-text">Shiny</span> <span id="shiny-pull-count">500</span>
+    </div>
+    <div id="reel-speed-container" style="font-family:'Press Start 2P',Arial,sans-serif;font-size:0.8em;color:#7de2fc;text-shadow:0 0 8px #7de2fc;display:flex;align-items:center;gap:0.5em;margin-top:-0.2em;">
+      <img src="assets/speed.png" alt="Speed" style="width:16px;height:16px;vertical-align:middle;filter:drop-shadow(0 0 6px #7de2fc);" />
+      Reel Speed: <span id="reel-speed-level">I</span>
+    </div>
+  </div>
+  <nav class="navbar" style="display: flex; justify-content: center; align-items: center; position: relative;">
+    <div style="display: flex; gap: 0.5em;">
+      <button class="tab-btn pixel-btn active" data-tab="fishing">Fishing</button>
+      <button class="tab-btn pixel-btn" data-tab="inventory">Inventory</button>
+	  <button class="tab-btn pixel-btn" data-tab="index">Index</button>
+      <button class="tab-btn pixel-btn" data-tab="upgrade">Upgrades</button>
+      <button class="tab-btn pixel-btn" data-tab="potions">Potions</button>
+      <button class="tab-btn pixel-btn" data-tab="relics">Triforce</button>
+      <button class="tab-btn pixel-btn" data-tab="mastery">Mastery</button>
+      <button class="tab-btn pixel-btn" data-tab="crates">Crates</button>
+      <button class="tab-btn pixel-btn" data-tab="shop">Shop</button>
+    </div>
+    <button id="settings-btn" class="pixel-btn" style="position: absolute; right: 0; display: flex; align-items: center; gap: 0.4em;">
+      <span style="font-size: 1.2em;">&#9881;</span>
+    </button>
+  </nav>
+  <!-- Settings Panel -->
+  <div id="settings-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#23283a;border:4px solid #00bcd4;box-shadow:0 2px 32px #000c;padding:2em 2.5em;z-index:3000;border-radius:12px;min-width:320px;min-height:180px;">
+    <h2 style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:1.1em;margin-top:0;">Settings</h2>
+    <button id="close-settings-btn" class="pixel-btn" style="position:absolute;top:12px;right:16px;font-size:1.1em;">Close</button>
+    <div style="margin-top:1.2em;margin-bottom:1.2em;display:flex;align-items:center;gap:1em;">
+      <label for="music-volume" style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.95em;">Music</label>
+      <input type="range" id="music-volume" min="0" max="1" step="0.01" style="flex:1;" />
+    </div>
+    <div style="margin-top:1.2em;margin-bottom:1.2em;display:flex;align-items:center;gap:1em;">
+      <label for="ui-volume" style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.95em;">UI Sounds</label>
+      <input type="range" id="ui-volume" min="0" max="1" step="0.01" style="flex:1;" />
+    </div>
+    <form id="cheat-form" style="margin-top:2em;display:flex;gap:0.6em;align-items:center;">
+      <input id="cheat-input" type="text" placeholder="Type cheat (e.g. /set coins 10000)" style="flex:1;padding:0.5em 1em;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.85em;background:#181c24;color:#fff;border:2px solid #00bcd4;border-radius:4px;outline:none;" />
+      <button type="submit" class="pixel-btn" style="padding:0.5em 1.2em;font-size:0.85em;">Run</button>
+    </form>
+    <div id="cheat-output" style="margin-top:1em;color:#23d160;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.9em;"></div>
+  </div>
+  <script type="module" src="settings.js"></script>
+  <main>
+    <section id="fishing" class="tab-content active">
+      <h2 style="text-align:center;font-size:1.5em;color:#00bcd4;margin-bottom:0.5em;letter-spacing:2px;">Zelda Fishing Idle</h2>
+      <div id="character-area">
+  <img src="assets/icon.png" alt="Fish Character" class="character-img" id="main-fish-img" />
+  <div id="fishing-status">Waiting to catch fish...</div>
+  <div id="fish-caught">Fish caught: <span id="last-catch-count">0</span></div>
+  <div id="recent-fish-container" style="width: 340px; min-height: 2em; margin: 0.2em 0 0.5em 0; display: flex; flex-direction: column; align-items: center; gap: 0.1em;"></div>
+</div>
+    </section>
+    <section id="inventory" class="tab-content">
+      <h2>Inventory</h2>
+      <div class="inventory-search" style="margin-bottom: 1em; display: flex; gap: 0.5em; justify-content: center;">
+        <input type="text" id="fish-search" placeholder="Search fish..." style="padding: 0.5em 1em; font-family: 'Press Start 2P', Arial, sans-serif; font-size: 0.85em; background: #181c24; color: #fff; border: 2px solid #00bcd4; border-radius: 4px; outline: none; width: 300px;">
+        <button id="search-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em;">Search</button>
+        <button id="reset-filters-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em; background: #23283a; border-color: #666; color: #999;">Reset</button>
+      </div>
+      <div class="inventory-filters" style="display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; margin-bottom: 1em; padding: 0.5em; background: #1d2232; border-radius: 4px;">
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Common">
+          <span class="checkmark"></span>
+          <span style="color: #b0c4b1;">Common</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Rare">
+          <span class="checkmark"></span>
+          <span style="color: #4299e1;">Rare</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Unique">
+          <span class="checkmark"></span>
+          <span style="color: #8e44ad;">Unique</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Epic">
+          <span class="checkmark"></span>
+          <span style="color: #e67e22;">Epic</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Legendary">
+          <span class="checkmark"></span>
+          <span style="color: #ffd700;">Legendary</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Mythical">
+          <span class="checkmark"></span>
+          <span style="color: #e84393;">Mythical</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="rarity-filter" data-rarity="Secret">
+          <span class="checkmark"></span>
+          <span style="color: #00bcd4; text-shadow: 0 0 8px #00bcd4, 0 0 12px #00bcd4;">Secret</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" id="shiny-filter">
+          <span class="checkmark"></span>
+          <span class="shiny-glow">Shiny</span>
+        </label>
+      </div>
+      <div id="inventory-list" style="width: 100%; height: 550px; overflow-y: auto; padding-right: 10px; margin-top: 0;" class="style-7">No items yet.</div>
+    </section>
+    <section id="upgrade" class="tab-content">
+      <h2>Upgrades</h2>
+      <div id="upgrade-list">
+  <div class="upgrade-tree">
+    <table class="upgrade-table">
+  <thead>
+    <tr>
+      <th>Upgrade</th>
+      <th>Cost</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Auto Fish</td>
+      <td><span id="auto-fish-cost" class="cost-red">15,000</span></td>
+      <td><button id="auto-fish-upgrade-btn" class="upgrade-purchase-btn">Locked</button></td>
+    </tr>
+    <tr>
+      <td id="reel-speed-name">Reel Speed I</td>
+      <td><span id="reel-speed-cost" class="cost-red">5,000</span></td>
+      <td><button id="reel-speed-btn" class="upgrade-purchase-btn">Locked</button></td>
+    </tr>
+    <tr>
+      <td id="luck-name">Luck I</td>
+      <td><span id="luck-cost" class="cost-red">7,500</span></td>
+      <td><button id="luck-btn" class="upgrade-purchase-btn">Locked</button></td>
+    </tr>
+  </tbody>
+</table>
+  </div>
+</div>
+    </section>
+	<section id="index" class="tab-content">
+      <h2>Index</h2>
+      <div id="index-list">Catch a fish to update the fish index!</div>
+    </section>
+    <section id="relics" class="tab-content">
+      <h2>Triforce</h2>
+      <div id="relics-list">Fixing this soon!</div>
+    </section>
+    <section id="mastery" class="tab-content">
+      <h2>Mastery</h2>
+      <div id="mastery-list">Mastery coming soon!</div>
+    </section>
+    <section id="crates" class="tab-content">
+      <h2>Crates</h2>
+      <div id="crates-list">Crates coming soon!</div>
+    </section>
+    <section id="shop" class="tab-content">
+      <h2>Shop</h2>
+      <div id="shop-list">Shop coming soon!</div>
+    </section>
+    <section id="potions" class="tab-content">
+  <h2>Potion Shop</h2>
+  <div style="display:flex; gap:2em; justify-content:center; margin-top:10px; flex-direction:column; align-items:center;">
+    <!-- Luck Potion -->
+    <div style="text-align:center;">
+      <button onclick="buyPotion('luck')" class="pixel-btn">
+        Buy Luck Potion (+10% Luck for 5 mins - 3,000 rupees)
+      </button>
+      <div id="luck-timer" style="margin-top:10px; font-size:14px; color:yellow;">Inactive</div>
+    </div>
+
+    <!-- Reel Speed Potion -->
+    <div style="text-align:center;">
+      <button onclick="buyPotion('reel')" class="pixel-btn">
+        Buy Reel Speed Potion (+20% Reel Speed for 5 mins - 5,000 rupees)
+      </button>
+      <div id="reel-timer" style="margin-top:10px; font-size:14px; color:lightblue;">Inactive</div>
+    </div>
+  </div>
+</section>
+  </main>
+  <script type="module" src="script.js"></script>
+  <audio id="bg-music" src="assets/song.mp3" loop></audio>
+  <audio id="click-sound" src="assets/click.mp3"></audio>
+  <audio id="close-sound" src="assets/close.mp3"></audio>
+  <audio id="tick-sound" src="assets/tick.mp3"></audio>
+</body>
+</html>
