@@ -1,5 +1,6 @@
 A Legend of Zelda based fishing idle game
 
-Play Here: https://edwinyaboy.github.io/zeldafishingidle/
+This is still being updated!
 
-THIS IS STILL BEING UPDATED
+Play Here: https://edwinyaboy.github.io/zeldafishingidle/
+EXPECT BUGS, PLS REPORT BUGS, PLS GIVE ME SUGGESTIONS
