@@ -1,5 +1,10 @@
 # Zelda Fishing Idle 🎣🐟
 
+[![Play Now](https://img.shields.io/badge/Play_Now-🎮-blue?style=for-the-badge)](https://edwinyaboy.github.io/zeldafishingidle/)
+![GitHub Repo Size](https://img.shields.io/github/repo-size/edwinyaboy/zeldafishingidle?style=flat-square)
+![GitHub stars](https://img.shields.io/github/stars/edwinyaboy/zeldafishingidle?style=flat-square)
+![GitHub last commit](https://img.shields.io/github/last-commit/edwinyaboy/zeldafishingidle?style=flat-square)
+
 A browser-based Legend of Zelda inspired fishing idle game.  
 **Play Here:** [https://edwinyaboy.github.io/zeldafishingidle/](https://edwinyaboy.github.io/zeldafishingidle/)
 
