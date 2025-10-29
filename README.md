@@ -21,7 +21,7 @@ A browser-based Legend of Zelda inspired fishing idle game.
 ---
 
 ### Screenshots
-<a href="screenshot1.png">
+<a href="screenshot.png">
   <img src="screenshot1.png" width="600" alt="Gameplay Screenshot">
 </a>
 <a href="screenshot2.png">
