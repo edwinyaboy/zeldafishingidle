@@ -7,7 +7,7 @@ A browser-based Legend of Zelda inspired fishing idle game.
 
 ---
 
-## Planned Updates
+## Planned Updates (Not In Order)
 
 - [ ] Achievements System
 - [ ] Currency & Items Update
