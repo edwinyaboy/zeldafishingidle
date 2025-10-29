@@ -497,16 +497,12 @@ function updateStatsDisplay() {
     <h3 style="margin-bottom: 1em;">Fish Statistics</h3>
     <div style="display: grid; gap: 1em;">
       <div style="background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px;">
-        <div style="font-size: 1.5em; color: #ffd700;">🎣 ${timesFished}</div>
+        <div style="font-size: 1.5em; color: #ffd700;">${timesFished}</div><br>
         <div style="color: #aaa; font-size: 0.9em;">Times Fished</div>
       </div>
       <div style="background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px;">
-        <div style="font-size: 1.5em; color: #4a90a4;">🐟 ${lifetimeFishCount}</div>
+        <div style="font-size: 1.5em; color: #4a90a4;">${lifetimeFishCount}</div><br>
         <div style="color: #aaa; font-size: 0.9em;">Fish Caught</div>
-      </div>
-      <div style="background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px;">
-        <div style="font-size: 1.5em; color: #8e44ad;">📦 ${Object.keys(inventory).length}</div>
-        <div style="color: #aaa; font-size: 0.9em;">Unique Fish</div>
       </div>
     </div>
   `;
@@ -947,18 +943,18 @@ function updateShopDisplay() {
     fishDiv.style.gap = '0.5em';
     
     fishDiv.innerHTML = `
-      <div>
-        <div style="color: ${fish.rarity.color}; font-weight: bold; margin-bottom: 0.3em;">${fish.fishName}</div>
-        <div style="color: #aaa; font-size: 0.9em;">Count: ${fish.count}</div>
-      </div>
-      <div style="display: flex; gap: 0.5em;">
-        <button class="sell-rupee-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #4a90a4;">
-          Sell for ${fish.rarity.baseCurrency} 💰
-        </button>
-        <button class="sell-mon-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #8e44ad;">
-          Sell for ${fish.rarity.monValue} 💎
-        </button>
-      </div>
+    <div>
+      <div style="color: ${fish.rarity.color}; font-weight: bold; margin-bottom: 0.3em;">${fish.fishName}</div>
+      <div style="color: #aaa; font-size: 0.9em;">Count: ${fish.count}</div>
+    </div>
+    <div style="display: flex; gap: 0.5em; align-items: center;">
+      <button class="sell-rupee-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #4a90a4; display: flex; align-items: center; gap: 0.3em;">
+        Sell for ${fish.rarity.baseCurrency} <img src="assets/coin.png" alt="Rupees" style="width: 16px; height: 16px;">
+      </button>
+      <button class="sell-mon-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #8e44ad; display: flex; align-items: center; gap: 0.3em;">
+        Sell for ${fish.rarity.monValue} <img src="assets/gem.png" alt="Mon" style="width: 16px; height: 16px;">
+      </button>
+    </div>
     `;
     
     shopInventory.appendChild(fishDiv);
