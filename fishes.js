@@ -29,14 +29,12 @@ export const fishList = {
   Unique: [
     'Reekfish',
     'Ordon Catfish',
-    'Sturgeon',
     'Loovar'
   ],
   Epic: [
     'Mighty Carp',
     'Mighty Porgy',
-    'Hylian Pike',
-    'Neon Piranha'
+    'Hylian Pike'
   ],
   Legendary: [
     'Hylian Loach',
