@@ -49,12 +49,12 @@ let pullsUntilShiny = 500;
 
 // Reel Speed upgrade state (3 tiers totaling +25)
 let reelSpeedLevel = 0;
-const reelSpeedCosts = [5000, 10000, 15000];
+const reelSpeedCosts = [10000, 20000, 50000];
 const reelSpeedBonuses = [8, 8, 9]; // Total: 25
 
 // Luck upgrade state (3 tiers totaling 10%)
 let luckLevel = 0;
-const luckCosts = [7500, 15000, 22500];
+const luckCosts = [15000, 30000, 75000];
 const luckBonuses = [0.0333, 0.0333, 0.0334]; // Total: 10%
 
 // Triforce shards collected
@@ -407,10 +407,10 @@ function updateInventoryDisplay(searchTerm = '') {
       const btn = document.createElement('button');
       btn.className = 'shiny-craft-btn';
       btn.textContent = 'Make Shiny';
-      btn.disabled = entry.count < 10;
+      btn.disabled = entry.count < 50;
       btn.onclick = () => {
-        if (entry.count >= 10) {
-          inventory[entry.key].count -= 10;
+        if (entry.count >= 50) {
+          inventory[entry.key].count -= 50;
           
           if (inventory[entry.key].count <= 0) {
             delete inventory[entry.key];
@@ -774,7 +774,7 @@ function catchFish() {
     setTimeout(() => {
       fishingStatus.textContent = 'Ready to fish!';
       if (fishBtn) fishBtn.disabled = false;
-    }, 1200);
+    }, 3000);
   }, fishingTime);
 }
 
@@ -1036,7 +1036,7 @@ function updateAutoFishCostColor() {
     costSpan.classList.remove('cost-red');
     costSpan.classList.add('cost-white');
     costSpan.textContent = '-';
-  } else if (currencyCount >= 15000) {
+  } else if (currencyCount >= 50000) {
     costSpan.classList.remove('cost-red');
     costSpan.classList.add('cost-white');
   } else {
@@ -1054,7 +1054,7 @@ function updateUpgradeMapButton() {
     autoFishUpgradeBtn.textContent = 'Unlocked';
     autoFishUpgradeBtn.classList.remove('green');
     autoFishUpgradeBtn.disabled = true;
-  } else if (currencyCount >= 15000) {
+  } else if (currencyCount >= 50000) {
     autoFishUpgradeBtn.textContent = 'Buy';
     autoFishUpgradeBtn.classList.add('green');
     autoFishUpgradeBtn.disabled = false;
@@ -1067,8 +1067,8 @@ function updateUpgradeMapButton() {
 
 if (autoFishUpgradeBtn) {
   autoFishUpgradeBtn.addEventListener('click', function() {
-    if (!autoFishUnlocked && currencyCount >= 15000) {
-      currencyCount -= 15000;
+    if (!autoFishUnlocked && currencyCount >= 50000) {
+      currencyCount -= 50000;
       autoFishUnlocked = true;
       saveState();
       updateUpgradeMapButton();
