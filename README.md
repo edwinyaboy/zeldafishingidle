@@ -1,7 +1,31 @@
-A Legend of Zelda based fishing idle game
+# Zelda Fishing Idle 🎣🐟
 
-This is still being updated!
+A browser-based Legend of Zelda inspired fishing idle game.  
+**Play Here:** [https://edwinyaboy.github.io/zeldafishingidle/](https://edwinyaboy.github.io/zeldafishingidle/)
 
-Play Here: https://edwinyaboy.github.io/zeldafishingidle/
+⚠️ **Still in development — expect bugs!** Please report issues or suggestions.
 
-EXPECT BUGS, PLS REPORT BUGS, PLS GIVE ME SUGGESTIONS
+---
+
+## Planned Updates
+
+- [ ] Achievements System
+- [ ] Currency & Items Update
+- [ ] Triforce & Special Items
+- [ ] Fishing Mechanics
+- [ ] Lures & Consumables
+- [ ] Upgrades & Stats
+- [ ] Inventory, Shop & Index
+- [ ] Mobile Compatibility
+
+---
+
+### Screenshots
+<a href="screenshot1.png">
+  <img src="screenshot1.png" width="300" alt="Gameplay Screenshot">
+</a>
+<a href="screenshot2.png">
+  <img src="screenshot2.png" width="300" alt="Chest Screenshot">
+</a>
+
+---
