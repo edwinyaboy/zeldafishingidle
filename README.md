@@ -6,7 +6,10 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/edwinyaboy/zeldafishingidle?style=flat-square)
 
 A browser-based Legend of Zelda inspired fishing idle game.  
+
 **Play Here:** [https://edwinyaboy.github.io/zeldafishingidle/](https://edwinyaboy.github.io/zeldafishingidle/)
+
+**Download Now:** [https://github.com/edwinyaboy/zeldafishingidle/releases/](https://github.com/edwinyaboy/zeldafishingidle/releases/)
 
 ⚠️ **Still in development — expect bugs!** Please report issues or suggestions.
 
