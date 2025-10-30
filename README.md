@@ -12,8 +12,9 @@ A browser-based Legend of Zelda inspired fishing idle game.
 
 ---
 
-## Planned Updates (Not In Order)
+## Update List
 
+- [ ] Mobile Compatibility [80% Complete]
 - [X] Achievements System
 - [X] Currency & Items Update
 - [X] Triforce & Special Items
@@ -21,7 +22,6 @@ A browser-based Legend of Zelda inspired fishing idle game.
 - [X] Lures & Consumables
 - [X] Upgrades & Stats
 - [X] Inventory, Shop & Index
-- [ ] Mobile Compatibility
 
 ---
 
