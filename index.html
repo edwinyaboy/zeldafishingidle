@@ -65,14 +65,23 @@
   <div id="settings-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#23283a;border:4px solid #00bcd4;box-shadow:0 2px 32px #000c;padding:2em 2.5em;z-index:3000;border-radius:12px;min-width:320px;min-height:180px;">
     <h2 style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:1.1em;margin-top:0;">Settings</h2>
     <button id="close-settings-btn" class="pixel-btn" style="position:absolute;top:12px;right:16px;font-size:1.1em;">Close</button>
+
     <div style="margin-top:1.2em;margin-bottom:1.2em;display:flex;align-items:center;gap:1em;">
       <label for="music-volume" style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.95em;">Music</label>
-      <input type="range" id="music-volume" min="0" max="1" step="0.01" style="flex:1;" />
+        <input type="range" id="music-volume" min="0" max="1" step="0.01" style="flex:1;" />
     </div>
+
     <div style="margin-top:1.2em;margin-bottom:1.2em;display:flex;align-items:center;gap:1em;">
       <label for="ui-volume" style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.95em;">UI Sounds</label>
       <input type="range" id="ui-volume" min="0" max="1" step="0.01" style="flex:1;" />
     </div>
+
+    <!-- Credits Section -->
+<div style="margin-top:1.5em; border-top:1px solid #00bcd4; padding-top:0.8em; font-size:0.75em; color:#aaa; font-family:'Press Start 2P',Arial,sans-serif; text-align:left;">
+  👑 Shrine - Main Developer<br>
+  ❤️ Drew - Beta Tester<br>
+  💩 MissZombae - Beta Tester
+</div>
   </div>
   <script type="module" src="settings.js"></script>
   <main>
