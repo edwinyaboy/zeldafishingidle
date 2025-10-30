@@ -609,13 +609,17 @@ main {
     flex-direction: column;
     align-items: stretch;
     gap: 0.4em;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 0.5em;
   }
 
   .inventory-search input,
   .inventory-search button {
-    width: 100%;
+    width: 100% !important;  /* override inline width */
     font-size: 0.75em;
     padding: 0.5em;
+    box-sizing: border-box;
   }
 
   /* Filter checkboxes wrap better */
@@ -624,6 +628,7 @@ main {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.5em;
+    padding: 0 0.5em;
   }
 
   .inventory-filters label {
@@ -637,6 +642,16 @@ main {
   .character-img { width: 70px; }
   .hex-tile { font-size: 1.2em; }
   #recent-fish-container { width: 150px; }
+
+  /* Reduce search bar padding slightly for very small phones */
+  .inventory-search {
+    padding: 0 0.3em;
+  }
+
+  .inventory-filters {
+    padding: 0 0.3em;
+    gap: 0.3em;
+  }
 }
 
 /* Hide side counters and stats on mobile */
