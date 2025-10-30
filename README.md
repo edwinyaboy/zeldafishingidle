@@ -16,8 +16,8 @@ A browser-based Legend of Zelda inspired fishing idle game.
 
 - [ ] Mobile Compatibility [95% Complete, Add Rupee/Mon Counter to Fishing Page, Fix Some Text Placement]
 - [ ] Fish Weight System
-- [ ] Standalone Executable
 - [ ] Mobile APK
+- [X] Standalone Executable
 - [X] Achievements System
 - [X] Currency & Items Update
 - [X] Triforce & Special Items
