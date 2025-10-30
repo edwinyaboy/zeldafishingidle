@@ -607,25 +607,23 @@ main {
   #recent-fish-container { width: 150px; }
 }
 
-@media (max-width: 500px) {
-  .navbar {
-    flex-direction: column;
-    gap: 0.2em;
-    align-items: stretch;
+@media (max-width: 600px) {
+  .navbar > div {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0.3em;
+    scrollbar-width: thin;
   }
 
-  .tab-btn {
+  .navbar .tab-btn {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0.5em 0.7em;
     font-size: 0.75em;
-    padding: 0.4em 0.6em;
-    border-radius: 0;
-    text-align: center;
-    border-bottom: none;
-    border-left: 3px solid transparent;
   }
 
-  .tab-btn.active {
-    border-left: 3px solid #00bcd4;
-    background: #292f43;
-    color: #00bcd4;
+  #settings-btn {
+    flex: 0 0 auto;
+    margin-left: 0.5em;
   }
 }
