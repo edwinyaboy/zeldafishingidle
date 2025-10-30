@@ -651,6 +651,7 @@ main {
     overflow-x: auto;
     gap: 0.3em;
     scrollbar-width: thin;
+    padding-right: 3em; /* reserve space for last tab (Shop) */
   }
 
   .navbar .tab-btn {
@@ -660,8 +661,11 @@ main {
     font-size: 0.75em;
   }
 
+  /* Fixed settings button on right */
   #settings-btn {
-    flex: 0 0 auto;
-    margin-left: 0.5em;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
 }
