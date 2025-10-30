@@ -1,12 +1,12 @@
 export const fishRarities = [
-  { name: 'Common', color: '#b0c4b1', chance: 0.60, baseCurrency: 10, xp: 1 },
-  { name: 'Rare', color: '#4299e1', chance: 0.20, baseCurrency: 50, xp: 3 },
-  { name: 'Unique', color: '#8e44ad', chance: 0.08, baseCurrency: 100, xp: 5 },
-  { name: 'Epic', color: '#e67e22', chance: 0.06, baseCurrency: 250, xp: 10 },
-  { name: 'Legendary', color: '#ffd700', chance: 0.04, baseCurrency: 1000, xp: 15 },
-  { name: 'Mythical', color: '#e84393', chance: 0.015, baseCurrency: 5000, xp: 20 },
-  { name: 'Secret', color: '#00bcd4', chance: 0.005, baseCurrency: 10000, xp: 30 },
-  { name: 'Triforce', color: '#ffcc00', chance: 0.001, baseCurrency: 0, xp: 0 }
+  { name: 'Common', color: '#b0c4b1', chance: 0.60, baseCurrency: 10, monValue: 1, xp: 1 },
+  { name: 'Rare', color: '#4299e1', chance: 0.20, baseCurrency: 50, monValue: 5, xp: 3 },
+  { name: 'Unique', color: '#8e44ad', chance: 0.08, baseCurrency: 100, monValue: 10, xp: 5 },
+  { name: 'Epic', color: '#e67e22', chance: 0.06, baseCurrency: 250, monValue: 20, xp: 10 },
+  { name: 'Legendary', color: '#ffd700', chance: 0.04, baseCurrency: 1000, monValue: 30, xp: 15 },
+  { name: 'Mythical', color: '#e84393', chance: 0.015, baseCurrency: 5000, monValue: 40, xp: 20 },
+  { name: 'Secret', color: '#00bcd4', chance: 0.005, baseCurrency: 10000, monValue: 50, xp: 30 },
+  { name: 'Triforce', color: '#ffcc00', chance: 0.001, baseCurrency: 0, monValue: 0, xp: 0 }
 ];
 
 export const fishList = {

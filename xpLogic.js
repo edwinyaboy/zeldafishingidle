@@ -31,8 +31,7 @@ export const xpTable = {
   29: 101500,
   30: 111000
 };
-
-export function getXpForLevel(level) {
+export function getXpForLevel(level) {
   return xpTable[level] !== undefined ? xpTable[level] : (xpTable[Object.keys(xpTable).length] || 0);
 }
 

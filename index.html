@@ -54,7 +54,7 @@
       <button class="tab-btn pixel-btn" data-tab="upgrade">Upgrades</button>
       <button class="tab-btn pixel-btn" data-tab="potions">Potions</button>
       <button class="tab-btn pixel-btn" data-tab="relics">Triforce</button>
-      <button class="tab-btn pixel-btn" data-tab="mastery">Mastery</button>
+      <button class="tab-btn pixel-btn" data-tab="mastery">Achievements</button>
       <button class="tab-btn pixel-btn" data-tab="crates">Chests</button>
       <button class="tab-btn pixel-btn" data-tab="shop">Shop</button>
     </div>
@@ -62,7 +62,6 @@
       <span style="font-size: 1.2em;">&#9881;</span>
     </button>
   </nav>
-  <!-- Settings Panel -->
   <div id="settings-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#23283a;border:4px solid #00bcd4;box-shadow:0 2px 32px #000c;padding:2em 2.5em;z-index:3000;border-radius:12px;min-width:320px;min-height:180px;">
     <h2 style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:1.1em;margin-top:0;">Settings</h2>
     <button id="close-settings-btn" class="pixel-btn" style="position:absolute;top:12px;right:16px;font-size:1.1em;">Close</button>
@@ -74,11 +73,6 @@
       <label for="ui-volume" style="color:#00bcd4;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.95em;">UI Sounds</label>
       <input type="range" id="ui-volume" min="0" max="1" step="0.01" style="flex:1;" />
     </div>
-    <form id="cheat-form" style="margin-top:2em;display:flex;gap:0.6em;align-items:center;">
-      <input id="cheat-input" type="text" placeholder="Type cheat (e.g. /set coins 10000)" style="flex:1;padding:0.5em 1em;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.85em;background:#181c24;color:#fff;border:2px solid #00bcd4;border-radius:4px;outline:none;" />
-      <button type="submit" class="pixel-btn" style="padding:0.5em 1.2em;font-size:0.85em;">Run</button>
-    </form>
-    <div id="cheat-output" style="margin-top:1em;color:#23d160;font-family:'Press Start 2P',Arial,sans-serif;font-size:0.9em;"></div>
   </div>
   <script type="module" src="settings.js"></script>
   <main>
@@ -144,33 +138,8 @@
     </section>
     <section id="upgrade" class="tab-content">
       <h2>Upgrades</h2>
-      <div id="upgrade-list">
-  <div class="upgrade-tree">
-    <table class="upgrade-table">
-  <thead>
-    <tr>
-      <th>Upgrade</th>
-      <th>Cost</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Auto Fish</td>
-      <td><span id="auto-fish-cost" class="cost-red">50k</span></td>
-      <td><button id="auto-fish-upgrade-btn" class="upgrade-purchase-btn">Locked</button></td>
-    </tr>
-    <tr>
-      <td id="reel-speed-name">Reel Speed I</td>
-      <td><span id="reel-speed-cost" class="cost-red">10k</span></td>
-      <td><button id="reel-speed-btn" class="upgrade-purchase-btn">Locked</button></td>
-    </tr>
-    <tr>
-      <td id="luck-name">Luck I</td>
-      <td><span id="luck-cost" class="cost-red">15k</span></td>
-      <td><button id="luck-btn" class="upgrade-purchase-btn">Locked</button></td>
-    </tr>
-  </tbody>
+      <div id="upgrade-list"></div>
+	</section>
 </table>
   </div>
 </div>
@@ -184,7 +153,7 @@
       <div id="relics-list"></div>
     </section>
     <section id="mastery" class="tab-content">
-      <h2>Mastery</h2>
+      <h2>Achievements</h2>
       <div id="mastery-list"></div>
     </section>
     <section id="crates" class="tab-content">
@@ -196,25 +165,9 @@
       <div id="shop-list"></div>
     </section>
     <section id="potions" class="tab-content">
-  <h2>Potion Shop</h2>
-  <div style="display:flex; gap:2em; justify-content:center; margin-top:10px; flex-direction:column; align-items:center;">
-    <!-- Luck Potion -->
-    <div style="text-align:center;">
-      <button onclick="buyPotion('luck')" class="pixel-btn">
-        Buy Luck Potion (+10% Luck for 5 mins - 3,000 rupees)
-      </button>
-      <div id="luck-timer" style="margin-top:10px; font-size:14px; color:yellow;">Inactive</div>
-    </div>
-
-    <!-- Reel Speed Potion -->
-    <div style="text-align:center;">
-      <button onclick="buyPotion('reel')" class="pixel-btn">
-        Buy Reel Speed Potion (+20% Reel Speed for 5 mins - 5,000 rupees)
-      </button>
-      <div id="reel-timer" style="margin-top:10px; font-size:14px; color:lightblue;">Inactive</div>
-    </div>
-  </div>
-</section>
+      <h2>Potions</h2>
+      <div id="potions"></div>
+    </section>
   </main>
   <script type="module" src="script.js"></script>
   <audio id="bg-music" src="assets/song.mp3" loop></audio>

@@ -1,342 +1,876 @@
-// Tab switching logic
-const tabBtns = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
+// ============================================
+// ZELDA FISHING GAME - COMPLETE MODULE REWRITE
+// ============================================
 
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
-    tabContents.forEach(tc => tc.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-    const fishBtn = document.getElementById('fish-btn');
-    if (fishBtn) {
-      if (btn.dataset.tab === 'fishing') {
-        fishBtn.style.display = '';
-      } else {
-        fishBtn.style.display = 'none';
-      }
-    }
-    updateAutoFishUIButton();
-  });
-});
+import { fishRarities, fishList, catchTriforceShard, playerStats } from './fishes.js';
 
-window.addEventListener('DOMContentLoaded', () => {
-  const fishBtn = document.getElementById('fish-btn');
-  if (fishBtn) {
-    const fishingTab = document.querySelector('.tab-btn.active');
-    if (fishingTab && fishingTab.dataset.tab !== 'fishing') {
-      fishBtn.style.display = 'none';
+// ----------------------------
+// Game state
+// ----------------------------
+export let gameState = {
+  rupees: 0,
+  mon: 0,
+  xp: 0,
+  level: 1,
+  lifetimeFish: 0,
+  timesFished: 0,
+  inventory: {},
+  fishIndex: {},
+  autoFishUnlocked: false,
+  reelSpeedLevel: 0,
+  luckLevel: 0,
+  collectedShards: {},
+  pullsUntilShiny: 500,
+  achievements: {},
+  currentLure: null,
+  comboCount: 0,
+  lastFishType: null,
+  sameTypeCombo: 0,
+  perfectHits: 0,
+  totalSpent: 0,
+  monSpent: 0,
+  activePotions: { luck: 0, reel: 0 },
+  temporaryBoosts: { luck: 0, reelSpeed: 0 }
+};
+
+// ----------------------------
+// Lure tiers
+// ----------------------------
+export const LURE_TIERS = [
+  { level: 0, name: 'Starter Lure', tier: 0, greenZone: 0.15, icon: 'starter' },
+  { level: 5, name: 'Coral Earring', tier: 1, greenZone: 0.25, icon: 'coral' },
+  { level: 10, name: 'Frog Lure', tier: 2, greenZone: 0.35, icon: 'frog' },
+  { level: 20, name: 'Sinking Lure', tier: 3, greenZone: 0.45, icon: 'sink' }
+];
+
+// ----------------------------
+// Tier-based rarity selection
+// ----------------------------
+export function getAvailableRaritiesForTier(tier) {
+  switch (tier) {
+    case 0: return ['Common', 'Rare'];
+    case 1: return ['Common', 'Rare', 'Unique', 'Epic'];
+    case 2: return ['Common', 'Rare', 'Unique', 'Epic', 'Legendary', 'Mythical'];
+    case 3: return ['Common', 'Rare', 'Unique', 'Epic', 'Legendary', 'Mythical', 'Secret', 'Triforce'];
+    default: return ['Common', 'Rare'];
+  }
+}
+
+export function getFishByLureTier(tier) {
+  const allowedRarities = getAvailableRaritiesForTier(tier);
+  const availableRarities = fishRarities.filter(r => allowedRarities.includes(r.name));
+
+  const totalChance = availableRarities.reduce((sum, r) => sum + r.chance, 0);
+  let rand = Math.random() * totalChance;
+  let selectedRarity = availableRarities[0];
+
+  for (const rarity of availableRarities) {
+    rand -= rarity.chance;
+    if (rand <= 0) {
+      selectedRarity = rarity;
+      break;
     }
   }
-});
 
-// Idle fishing mechanic
-let fishCount = 0;
-let currencyCount = 0;
-let gemCount = 0;
-let lifetimeFishCount = 0;
-let timesFished = 0;
-const fishCountSpan = document.getElementById('fish-count');
-const fishingStatus = document.getElementById('fishing-status');
-const coinCountSpan = document.getElementById('coin-count');
-const gemCountSpan = document.getElementById('gem-count');
-const lifetimeFishCountSpan = document.getElementById('lifetime-fish-count');
-const luckPercentageSpan = document.getElementById('luck-percentage');
-const shinyPullCountSpan = document.getElementById('shiny-pull-count');
+  const pool = fishList[selectedRarity.name];
+  if (selectedRarity.name === 'Triforce') {
+    const shard = pool[Math.floor(Math.random() * pool.length)];
+    catchTriforceShard(shard);
+    return { rarity: selectedRarity, fishName: shard.name, raw: shard };
+  } else {
+    const name = pool[Math.floor(Math.random() * pool.length)];
+    return { rarity: selectedRarity, fishName: name };
+  }
+}
 
-let autoFishUnlocked = false;
-let pullsUntilShiny = 500;
+// ACHIEVEMENTS DATA
+const ACHIEVEMENTS = {
+  catch: {
+    firstCatch: { name: 'First Catch', desc: 'Catch your first fish', reward: 5, unlocked: false },
+    collector: { name: 'Collector', desc: 'Catch 10 different species', reward: 20, unlocked: false },
+    anglerMaster: { name: 'Angler Master', desc: 'Catch all fish', reward: 100, unlocked: false },
+    rareCatch: { name: 'Rare Catch', desc: 'Catch a Rare fish', reward: 10, unlocked: false },
+    uniqueCatch: { name: 'Unique Catch', desc: 'Catch a Unique fish', reward: 15, unlocked: false },
+    epicCatch: { name: 'Epic Catch', desc: 'Catch an Epic fish', reward: 25, unlocked: false },
+    legendaryCatch: { name: 'Legendary Catch', desc: 'Catch a Legendary fish', reward: 40, unlocked: false },
+    mythicalCatch: { name: 'Mythical Catch', desc: 'Catch a Mythical fish', reward: 50, unlocked: false },
+    secretCatch: { name: 'Secret Catch', desc: 'Catch the Secret fish', reward: 100, unlocked: false }
+  },
+  shiny: {
+    shinyHunter: { name: 'Shiny Hunter', desc: 'Catch your first shiny', reward: 30, unlocked: false },
+    shinyCollector: { name: 'Shiny Collector', desc: 'Catch 10 shinies', reward: 50, unlocked: false },
+    shinyMaster: { name: 'Shiny Master', desc: 'Catch all shiny fish', reward: 150, unlocked: false }
+  },
+  quantity: {
+    busyBeaver: { name: 'Busy Beaver', desc: 'Catch 100 fish total', reward: 25, unlocked: false },
+    fishingFrenzy: { name: 'Fishing Frenzy', desc: 'Catch 500 fish total', reward: 50, unlocked: false },
+    lifetimeAngler: { name: 'Lifetime Angler', desc: 'Catch 1000 fish total', reward: 100, unlocked: false }
+  },
+  lure: {
+    baitBeginner: { name: 'Bait Beginner', desc: 'Unlock Coral Earring', reward: 10, unlocked: false },
+    lurePro: { name: 'Lure Pro', desc: 'Unlock Frog Lure', reward: 20, unlocked: false },
+    lureMaster: { name: 'Lure Master', desc: 'Unlock Sinking Lure', reward: 30, unlocked: false }
+  },
+  skill: {
+    perfectSlider: { name: 'Perfect Slider', desc: 'Hit green zone perfectly 5 times', reward: 50, unlocked: false },
+    reelSpeedDemon: { name: 'Reel Speed Demon', desc: 'Max out Reel Speed', reward: 40, unlocked: false },
+    luckyAngler: { name: 'Lucky Angler', desc: 'Max out Luck', reward: 40, unlocked: false }
+  },
+  upgrade: {
+    autoFishOwner: { name: 'Auto-Fish Owner', desc: 'Buy Auto Fish', reward: 25, unlocked: false },
+    bigSpender: { name: 'Big Spender', desc: 'Spend 50,000 rupees', reward: 75, unlocked: false },
+    monSpender: { name: '420 Mon', desc: 'Spend 1,000 Mon', reward: 69, unlocked: false }
+  },
+  triforce: {
+    courageComplete: { name: 'Triforce of Courage', desc: 'Collect all shards', reward: 200, unlocked: false }
+  }
+};
 
-// Reel Speed upgrade state (3 tiers totaling +25)
-let reelSpeedLevel = 0;
-const reelSpeedCosts = [10000, 20000, 50000];
-const reelSpeedBonuses = [8, 8, 9]; // Total: 25
+// UI ELEMENTS
+const elements = {
+  rupees: document.getElementById('coin-count'),
+  mon: document.getElementById('gem-count'),
+  lifetimeFish: document.getElementById('lifetime-fish-count'),
+  luck: document.getElementById('luck-percentage'),
+  reelSpeed: document.getElementById('reel-speed-level'),
+  shinyPull: document.getElementById('shiny-pull-count'),
+  xpLevel: document.getElementById('xp-level'),
+  xpProgress: document.getElementById('xp-progress'),
+  xpText: document.getElementById('xp-progress-text'),
+  fishingStatus: document.getElementById('fishing-status'),
+  fishBtn: null,
+  autoFishBtn: null
+};
 
-// Luck upgrade state (3 tiers totaling 10%)
-let luckLevel = 0;
-const luckCosts = [15000, 30000, 75000];
-const luckBonuses = [0.0333, 0.0333, 0.0334]; // Total: 10%
+// SLIDER STATE
+let sliderState = {
+  active: false,
+  position: 0,
+  greenStart: 0,
+  greenEnd: 0,
+  speed: 2,
+  direction: 1,
+  animFrame: null,
+  pendingFish: null
+};
 
-// Triforce shards collected
-let collectedShards = {};
+// FISHING STATE
+let isFishing = false;
 
-// Track 10 most recent caught fish
-let recentFish = [];
-
-// Anti-autoclicker
-let lastClickTime = 0;
-let clickCount = 0;
-
-// Load saved state
+// LOAD/SAVE
 function loadState() {
-  const saved = JSON.parse(localStorage.getItem('fishingGameState') || '{}');
-  if (typeof saved.currencyCount === 'number') currencyCount = saved.currencyCount;
-  if (typeof saved.gemCount === 'number') gemCount = saved.gemCount;
-  if (typeof saved.fishCount === 'number') fishCount = saved.fishCount;
-  if (typeof saved.lifetimeFishCount === 'number') lifetimeFishCount = saved.lifetimeFishCount;
-  if (typeof saved.timesFished === 'number') timesFished = saved.timesFished;
-  if (typeof saved.inventory === 'object' && saved.inventory) {
-    Object.assign(inventory, saved.inventory);
-  }
-  if (typeof saved.xp === 'number') xp = saved.xp;
-  if (typeof saved.level === 'number') level = saved.level;
-  if (typeof saved.autoFishUnlocked === 'boolean') autoFishUnlocked = saved.autoFishUnlocked;
-  if (typeof saved.reelSpeedLevel === 'number') reelSpeedLevel = saved.reelSpeedLevel;
-  if (typeof saved.luckLevel === 'number') luckLevel = saved.luckLevel;
-  if (typeof saved.pullsUntilShiny === 'number') pullsUntilShiny = saved.pullsUntilShiny;
-  if (typeof saved.collectedShards === 'object' && saved.collectedShards) {
-    collectedShards = saved.collectedShards;
-  }
-  updateXPBar();
-  updateReelSpeedButtons();
-  updateLuckButtons();
-  updateShinyPullCounter();
-  updateReelSpeedCounter();
-  updateTriforceUI();
-  if (lifetimeFishCountSpan) lifetimeFishCountSpan.textContent = lifetimeFishCount;
-  updateLuckDisplay();
-}
+  const saved = localStorage.getItem('zeldaFishingV2');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      Object.assign(gameState, data);
 
-// Save state
-function saveState() {
-  localStorage.setItem('fishingGameState', JSON.stringify({
-    currencyCount, 
-    gemCount, 
-    fishCount, 
-    lifetimeFishCount,
-    timesFished,
-    inventory, 
-    xp, 
-    level, 
-    autoFishUnlocked,
-    reelSpeedLevel,
-    luckLevel,
-    pullsUntilShiny,
-    collectedShards
-  }));
-}
+      // Sync ACHIEVEMENTS unlocked status from saved gameState
+      Object.keys(gameState.achievements).forEach(key => {
+        const [category, achKey] = key.split('_');
+        if (ACHIEVEMENTS[category] && ACHIEVEMENTS[category][achKey]) {
+          ACHIEVEMENTS[category][achKey].unlocked = true;
+        }
+      });
 
-// Import fish rarities and fish list
-import { fishRarities, fishList } from './fishes.js';
-
-// Add Mon values to rarities if not present
-fishRarities.forEach(rarity => {
-  if (!rarity.monValue) {
-    const monValues = {
-      'Common': 1,
-      'Rare': 3,
-      'Unique': 5,
-      'Epic': 10,
-      'Legendary': 15,
-      'Mythical': 25,
-      'Secret': 50,
-      'Triforce': 0
-    };
-    rarity.monValue = monValues[rarity.name] || 1;
-  }
-});
-
-// Calculate total luck (capped at 100%)
-function getTotalLuck() {
-  let totalLuck = 0;
-  
-  // From upgrades (max 10%)
-  for (let i = 0; i < luckLevel; i++) {
-    totalLuck += luckBonuses[i];
-  }
-  
-  // From triforce shards (4 shards x 5% = 20%)
-  Object.values(collectedShards).forEach(shard => {
-    if (shard.type === 'luck') {
-      totalLuck += shard.value;
+      updateAllUI();
+    } catch (e) {
+      console.error('Load failed', e);
     }
-  });
-  
-  // From potion (10%)
-  if (activePotions.luck > Date.now()) {
-    totalLuck += 0.10;
   }
-  
-  // Cap at 100%
-  return Math.min(totalLuck, 1.0);
 }
 
-// Calculate total reel speed bonus
+function saveState() {
+  localStorage.setItem('zeldaFishingV2', JSON.stringify(gameState));
+}
+
+// CALCULATIONS
+function getTotalLuck() {
+  let total = 0;
+  const tierBonuses = [0.0333, 0.0333, 0.0334];
+  for (let i = 0; i < gameState.luckLevel; i++) total += tierBonuses[i];
+  Object.values(gameState.collectedShards).forEach(s => {
+    if (s.type === 'luck') total += s.value;
+  });
+  if (Date.now() < gameState.activePotions.luck) total += 0.10;
+  total += gameState.temporaryBoosts.luck;
+  return Math.min(total, 1.0);
+}
+
 function getReelSpeedBonus() {
   let bonus = 0;
-  
-  // From upgrades (max 25)
-  for (let i = 0; i < reelSpeedLevel; i++) {
-    bonus += reelSpeedBonuses[i];
-  }
-  
-  // From triforce shards (4 shards x 5 = 20)
-  Object.values(collectedShards).forEach(shard => {
-    if (shard.type === 'reelSpeed') {
-      bonus += shard.value;
-    }
+  const tierBonuses = [8, 8, 9];
+  for (let i = 0; i < gameState.reelSpeedLevel; i++) bonus += tierBonuses[i];
+  Object.values(gameState.collectedShards).forEach(s => {
+    if (s.type === 'reelSpeed') bonus += s.value;
   });
-  
-  // From potion (20)
-  if (activePotions.reel > Date.now()) {
-    bonus += 20;
-  }
-  
+  if (Date.now() < gameState.activePotions.reel) bonus += 20;
+  bonus += gameState.temporaryBoosts.reelSpeed;
   return bonus;
 }
 
-// Update luck display
-function updateLuckDisplay() {
-  if (luckPercentageSpan) {
-    const totalLuck = getTotalLuck() * 100;
-    luckPercentageSpan.textContent = totalLuck.toFixed(1);
+function getCurrentLure() {
+  let current = null;
+  LURE_TIERS.forEach(lure => {
+    if (gameState.level >= lure.level) current = lure;
+  });
+  return current;
+}
+
+function getLureIcon() {
+  const lure = getCurrentLure();
+  if (!lure) return 'assets/starter_lure.png';
+  const icons = {
+    0: 'assets/starter_lure.png',
+    1: 'assets/coral_earring.png',
+    2: 'assets/frog_lure.png',
+    3: 'assets/sinking_lure.png'
+  };
+  return icons[lure.tier] || 'assets/starter_lure.png';
+}
+
+function getTotalInventoryCount() {
+  return Object.values(gameState.inventory).reduce((sum, fish) => sum + fish.count, 0);
+}
+
+function formatNumber(n) {
+  n = n || 0;
+  if (n < 10000) return n.toLocaleString();
+  if (n < 1000000) return Math.floor(n / 1000) + 'k';
+  return Math.floor(n / 1000000) + 'M';
+}
+
+function getFishImage(fishName) {
+  if (fishName === 'Hyrule Bass') return 'assets/fish.png';
+  const cleanName = fishName.replace(' (shiny)', '').replace(/ /g, '_');
+  return `assets/${cleanName}.png`;
+}
+
+// ACHIEVEMENTS
+function unlockAchievement(category, key) {
+  if (!ACHIEVEMENTS[category] || !ACHIEVEMENTS[category][key]) return;
+  const ach = ACHIEVEMENTS[category][key];
+  if (gameState.achievements[`${category}_${key}`]) {
+    ach.unlocked = true;
+    return;
+  }
+
+  ach.unlocked = true;
+  gameState.achievements[`${category}_${key}`] = true;
+  gameState.mon += ach.reward;
+
+  showNotification(`🏆 ${ach.name} unlocked! +${ach.reward} Mon`);
+  updateAllUI();
+  saveState();
+}
+
+function checkAchievements() {
+  if (gameState.lifetimeFish >= 1) unlockAchievement('catch', 'firstCatch');
+  if (gameState.lifetimeFish >= 100) unlockAchievement('quantity', 'busyBeaver');
+  if (gameState.lifetimeFish >= 500) unlockAchievement('quantity', 'fishingFrenzy');
+  if (gameState.lifetimeFish >= 1000) unlockAchievement('quantity', 'lifetimeAngler');
+  
+  const uniqueSpecies = Object.keys(gameState.fishIndex).filter(k => !k.includes('(shiny)')).length;
+  if (uniqueSpecies >= 10) unlockAchievement('catch', 'collector');
+  
+  const allFish = [];
+  Object.keys(fishList).forEach(rarity => {
+    if (rarity !== 'Triforce') {
+      fishList[rarity].forEach(f => {
+        if (typeof f === 'string') allFish.push(f);
+      });
+    }
+  });
+  if (allFish.every(f => gameState.fishIndex[f])) unlockAchievement('catch', 'anglerMaster');
+  
+  const shinyCount = Object.keys(gameState.inventory).filter(k => k.includes('(shiny)')).length;
+  if (shinyCount >= 1) unlockAchievement('shiny', 'shinyHunter');
+  if (shinyCount >= 10) unlockAchievement('shiny', 'shinyCollector');
+  
+  if (gameState.reelSpeedLevel >= 3) unlockAchievement('skill', 'reelSpeedDemon');
+  if (gameState.luckLevel >= 3) unlockAchievement('skill', 'luckyAngler');
+  if (gameState.perfectHits >= 5) unlockAchievement('skill', 'perfectSlider');
+  
+  if (gameState.autoFishUnlocked) unlockAchievement('upgrade', 'autoFishOwner');
+  if (gameState.totalSpent >= 50000) unlockAchievement('upgrade', 'bigSpender');
+  if (gameState.monSpent >= 1000) unlockAchievement('upgrade', 'monSpender');
+  
+  if (Object.keys(gameState.collectedShards).length === 8) unlockAchievement('triforce', 'courageComplete');
+  
+  const lure = getCurrentLure();
+  if (lure) {
+    if (lure.tier >= 1) unlockAchievement('lure', 'baitBeginner');
+    if (lure.tier >= 2) unlockAchievement('lure', 'lurePro');
+    if (lure.tier >= 3) unlockAchievement('lure', 'lureMaster');
   }
 }
 
+// NOTIFICATIONS
+const notifications = [];
+
+function showNotification(message) {
+  const notif = document.createElement('div');
+  notif.textContent = message;
+  notif.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #2a2f44;
+    color: #ffd700;
+    padding: 1em 1.5em;
+    border-radius: 8px;
+    border: 2px solid #ffd700;
+    z-index: 9999;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8em;
+    margin-top: 0.5em;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  `;
+
+  document.body.appendChild(notif);
+  notifications.push(notif);
+
+  notifications.forEach((n, i) => {
+    n.style.top = `${20 + i * 60}px`;
+  });
+
+  requestAnimationFrame(() => {
+    notif.style.opacity = 1;
+    notif.style.transform = 'translateX(0)';
+  });
+
+  setTimeout(() => {
+    notif.style.opacity = 0;
+    notif.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      notif.remove();
+      notifications.splice(notifications.indexOf(notif), 1);
+      notifications.forEach((n, i) => {
+        n.style.top = `${20 + i * 60}px`;
+      });
+    }, 300);
+  }, 3000);
+}
+
+// FISHING SLIDER
+function initSlider(fishData) {
+  const lure = getCurrentLure();
+  const greenZoneSize = lure ? lure.greenZone : 0.20;
+  
+  sliderState.greenStart = 0.15 + Math.random() * (0.85 - greenZoneSize - 0.15);
+  sliderState.greenEnd = sliderState.greenStart + greenZoneSize;
+  sliderState.position = 0;
+  sliderState.direction = 1;
+  sliderState.speed = 0.5 + Math.random() * 0.3;
+  sliderState.active = true;
+  sliderState.pendingFish = fishData;
+  
+  drawSlider();
+  animateSlider();
+}
+
+function drawSlider() {
+  let sliderUI = document.getElementById('fishing-slider');
+  if (!sliderUI) {
+    sliderUI = document.createElement('div');
+    sliderUI.id = 'fishing-slider';
+    sliderUI.style.cssText = `
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      height: 60px;
+      background: #2a2f44;
+      border: 3px solid #4a90a4;
+      border-radius: 8px;
+      margin: 20px auto;
+      overflow: hidden;
+    `;
+    document.getElementById('character-area').appendChild(sliderUI);
+  }
+  
+  const lureIcon = getLureIcon();
+  
+  sliderUI.innerHTML = `
+    <div style="position: absolute; left: ${sliderState.greenStart * 100}%; width: ${(sliderState.greenEnd - sliderState.greenStart) * 100}%; height: 100%; background: #23d160; opacity: 0.5;"></div>
+    <div id="slider-marker" style="position: absolute; left: ${sliderState.position * 100}%; top: 50%; transform: translate(-50%, -50%);">
+      <img src="${lureIcon}" style="width: 40px; height: 40px; image-rendering: pixelated; object-fit: contain;">
+    </div>
+  `;
+}
+
+function animateSlider() {
+  if (!sliderState.active) return;
+  
+  sliderState.position += sliderState.direction * sliderState.speed * 0.005;
+  
+  if (sliderState.position >= 1) {
+    sliderState.position = 1;
+    sliderState.direction = -1;
+  } else if (sliderState.position <= 0) {
+    sliderState.position = 0;
+    sliderState.direction = 1;
+  }
+  
+  const marker = document.getElementById('slider-marker');
+  if (marker) {
+    marker.style.left = (sliderState.position * 100) + '%';
+  }
+  
+  sliderState.animFrame = requestAnimationFrame(animateSlider);
+}
+
+function stopSlider(success) {
+  sliderState.active = false;
+  if (sliderState.animFrame) {
+    cancelAnimationFrame(sliderState.animFrame);
+    sliderState.animFrame = null;
+  }
+  
+  const sliderUI = document.getElementById('fishing-slider');
+  if (sliderUI) {
+    setTimeout(() => sliderUI.remove(), 100);
+  }
+  
+  if (success) {
+    completeCatch(sliderState.pendingFish);
+  } else {
+    gameState.comboCount = 0;
+    gameState.sameTypeCombo = 0;
+    elements.fishingStatus.textContent = '❌ Missed!';
+    setTimeout(() => {
+      elements.fishingStatus.textContent = 'Ready to fish!';
+      if (elements.fishBtn) elements.fishBtn.disabled = false;
+      isFishing = false; // Reset fishing state
+    }, 1500);
+  }
+  
+  sliderState.pendingFish = null;
+}
+
+function clickSlider() {
+  if (!sliderState.active) return;
+  
+  const inGreen = sliderState.position >= sliderState.greenStart && sliderState.position <= sliderState.greenEnd;
+  const midPoint = (sliderState.greenStart + sliderState.greenEnd) / 2;
+  const perfect = Math.abs(sliderState.position - midPoint) < 0.05;
+  
+  if (perfect) {
+    gameState.perfectHits++;
+    checkAchievements();
+  }
+  
+  stopSlider(inGreen);
+}
+
+// Helper to add fish to inventory
+function addFishToInventory(fishName, rarity, count = 1) {
+  const key = `${rarity.name}|${fishName}`;
+
+  // Clone rarity so all fields exist
+  const rarityCopy = { ...fishRarities.find(r => r.name === rarity.name) };
+
+  if (!gameState.inventory[key]) {
+    gameState.inventory[key] = { fishName, rarity: rarityCopy, count: 0 };
+  }
+
+  gameState.inventory[key].count += count;
+  if (gameState.inventory[key].count > 50) gameState.inventory[key].count = 50;
+
+  // Update fishIndex
+  if (!gameState.fishIndex[fishName]) {
+    gameState.fishIndex[fishName] = { rarity: rarityCopy, count: 0, unlocked: true };
+  }
+  gameState.fishIndex[fishName].count += count;
+  
+  // Cap fishIndex count
+  if (gameState.fishIndex[fishName].count > 9999) {
+    gameState.fishIndex[fishName].count = 9999;
+  }
+}
+
+// ---------------- FISHING ----------------
+function startFishing() {
+  // Prevent any fishing action if already in progress
+  if (isFishing || sliderState.active) {
+    if (sliderState.active) clickSlider();
+    return;
+  }
+
+  // Prevent fishing if button is disabled
+  if (elements.fishBtn && elements.fishBtn.disabled) return;
+
+  isFishing = true;
+  if (elements.fishBtn) elements.fishBtn.disabled = true;
+  elements.fishingStatus.textContent = 'Casting...';
+  gameState.timesFished++;
+
+  setTimeout(() => {
+    const lure = getCurrentLure();
+    const tierResult = getFishByLureTier(lure ? lure.tier : 0);
+    const rarity = tierResult.rarity;
+    let fishName = tierResult.fishName;
+    const fishData = tierResult.raw || fishName;
+    let isTriforce = rarity.name === 'Triforce';
+
+    let isShiny = false;
+    if (gameState.pullsUntilShiny <= 1 && !isTriforce) {
+      isShiny = true;
+      gameState.pullsUntilShiny = 500;
+      fishName += ' (shiny)';
+    } else if (!isTriforce) {
+      gameState.pullsUntilShiny--;
+    }
+
+    elements.fishingStatus.innerHTML =
+      'Click <span style="color: #4a90a4; font-weight: bold;">Fish!</span> button to catch!';
+    if (elements.fishBtn) elements.fishBtn.disabled = false;
+    initSlider({ rarity, fishName, fishData, isShiny, isTriforce });
+  }, 1000);
+}
+
+function completeCatch(data) {
+  const { rarity, fishName, fishData, isTriforce } = data;
+  const { comboCount, sameTypeCombo, lastFishType } = gameState;
+
+  // --- Base values ---
+  let rupees = rarity.baseCurrency;
+  let xp = rarity.xp;
+  gameState.lifetimeFish++;
+
+  // --- Combo System ---
+  const comboMultiplier = 1 + Math.min(comboCount * 0.1, 1.0);
+  gameState.comboCount++;
+
+  if (fishName === lastFishType) {
+    gameState.sameTypeCombo++;
+  } else {
+    gameState.sameTypeCombo = 1;
+    gameState.lastFishType = fishName;
+  }
+
+  const sameTypeMultiplier = 1 + Math.min((gameState.sameTypeCombo - 1) * 0.1, 1.0);
+
+  // --- Apply multipliers ---
+  rupees = Math.floor(rupees * comboMultiplier * sameTypeMultiplier);
+  xp = Math.floor(xp * comboMultiplier);
+
+  // --- Update stats ---
+  gameState.rupees += rupees;
+  gameState.xp += xp;
+
+  // --- Level up logic ---
+  if (gameState.xp >= 100) {
+    gameState.xp -= 100;
+    gameState.level++;
+    showNotification(`⭐ Level Up! Now level ${gameState.level}`);
+  }
+
+  // --- Triforce shard collection ---
+  if (isTriforce && !gameState.collectedShards[fishData.id]) {
+    gameState.collectedShards[fishData.id] = fishData;
+
+    // Pick correct shard image (1–8)
+    const shardNum = Math.min(fishData.id + 1, 8);
+    const shardImg = `assets/Triforce_Shard_${shardNum}.png`;
+
+    showNotification(`
+      <img src="${shardImg}" alt="Triforce Shard" style="height:20px; vertical-align:middle; margin-right:4px;">
+      Triforce Shard collected!
+    `);
+  }
+
+  // --- Inventory ---
+  if (getTotalInventoryCount() >= 100) {
+    showNotification('Inventory full! (100 fish max)');
+  } else {
+    addFishToInventory(fishName, rarity);
+  }
+
+  // --- Achievements ---
+  const rarityAchievements = ['Rare', 'Unique', 'Epic', 'Legendary', 'Mythical', 'Secret'];
+  if (rarityAchievements.includes(rarity.name)) {
+    unlockAchievement('catch', `${rarity.name.toLowerCase()}Catch`);
+  }
+
+  // --- Bonus text ---
+  const bonusLines = [];
+  if (comboMultiplier > 1) bonusLines.push(`💥 ${comboMultiplier.toFixed(1)}x Combo`);
+  if (sameTypeMultiplier > 1) bonusLines.push(`🔥 ${sameTypeMultiplier.toFixed(1)}x Streak`);
+
+  // --- Display catch info ---
+  elements.fishingStatus.innerHTML = `
+   Caught <span style="color:${rarity.color}">${fishName}</span>!<br>
+   <span style="font-size:0.9em; display:inline-flex; align-items:center; gap:6px; color:#ffd700;">
+     +${rupees} <img src="assets/coin.png" alt="Rupee" style="height:16px; vertical-align:middle;">
+   </span><br>
+   <span style="color:#4db8ff; font-size:0.9em;">+${xp} XP</span>
+    ${bonusLines.length ? `<br><span style="color:#ff6b6b; font-size:0.85em;">${bonusLines.join('<br>')}</span>` : ''}
+  `;
+
+  // --- Final updates ---
+  checkAchievements();
+  updateAllUI();
+  saveState();
+
+  // --- Reset state ---
+  setTimeout(() => {
+    elements.fishingStatus.textContent = 'Ready to fish!';
+    if (elements.fishBtn) elements.fishBtn.disabled = false;
+    isFishing = false;
+  }, 2500);
+}
+
+// ---------------- RANDOM ----------------
 function getRandomRarity() {
+  const luck = getTotalLuck();
   let rand = Math.random();
   let acc = 0;
-  
-  const luckBonus = getTotalLuck();
-  
+
   for (const rarity of fishRarities) {
-    let adjustedChance = rarity.chance;
-    
-    if (rarity.name !== 'Common') {
-      adjustedChance *= (1 + luckBonus);
-    } else {
-      adjustedChance *= (1 - luckBonus * 0.5);
-    }
-    
-    acc += adjustedChance;
+    let chance = rarity.chance;
+    if (rarity.name !== 'Common') chance *= (1 + luck);
+    else chance *= (1 - luck * 0.5);
+
+    acc += chance;
     if (rand < acc) return rarity;
   }
   return fishRarities[0];
 }
 
-function getRandomFish(rarity) {
+function getRandomFishByRarity(rarity) {
   const arr = fishList[rarity.name];
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Update Triforce UI
-function updateTriforceUI() {
-  const container = document.getElementById('relics-list');
-  if (!container) return;
+// ---------------- AUTO FISH ----------------
+let autoFishInterval = null;
+let autoFishTimer = 30;
+let autoFishCountdown = null;
 
-  container.innerHTML = '<h3 style="margin-bottom: 1em;">Triforce Shards</h3>';
-  
-  const grid = document.createElement('div');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
-  grid.style.gap = '1em';
-
-  fishList.Triforce.forEach(shard => {
-    const isCollected = !!collectedShards[shard.id];
-    const shardDiv = document.createElement('div');
-    shardDiv.style.padding = '1em';
-    shardDiv.style.border = '2px solid gold';
-    shardDiv.style.borderRadius = '10px';
-    shardDiv.style.backgroundColor = isCollected ? '#ffd700' : '#333';
-    shardDiv.style.color = isCollected ? '#000' : '#888';
-    shardDiv.style.textAlign = 'center';
-    shardDiv.style.fontSize = '0.8em';
-    
-    shardDiv.innerHTML = `
-      <div style="margin-bottom: 0.5em;">
-        <img src="assets/Triforce_Shard_${shard.id}.png" alt="Shard ${shard.id}" style="width: 64px; height: 64px; image-rendering: pixelated; ${isCollected ? '' : 'filter: grayscale(100%) brightness(0.5);'}">
-      </div>
-      <div>${shard.name}</div>
-      ${isCollected ? `<div style="margin-top: 0.5em; color: #666;">${shard.type === 'luck' ? `+${shard.value * 100}% Luck` : `+${shard.value} Speed`}</div>` : ''}
-    `;
-    
-    grid.appendChild(shardDiv);
-  });
-  
-  container.appendChild(grid);
+function toggleAutoFish() {
+  if (autoFishInterval) stopAutoFish();
+  else startAutoFish();
 }
 
-// Inventory system
-const inventory = {};
+function startAutoFish() {
+  if (!gameState.autoFishUnlocked) return;
 
-function updateInventoryDisplay(searchTerm = '') {
-  const inventoryList = document.getElementById('inventory-list');
-  if (!inventoryList) return;
-  if (Object.keys(inventory).length === 0) {
-    inventoryList.textContent = 'No items yet.';
-    return;
+  autoFishTimer = 30;
+  updateAutoFishTimer();
+
+  autoFishInterval = setInterval(() => {
+    if (!sliderState.active && elements.fishBtn && !elements.fishBtn.disabled) autoCatchFish();
+  }, 3000);
+
+  autoFishCountdown = setInterval(() => {
+    autoFishTimer--;
+    updateAutoFishTimer();
+    if (autoFishTimer <= 0) stopAutoFish();
+  }, 1000);
+
+  if (elements.autoFishBtn) {
+    elements.autoFishBtn.textContent = `Stop (${autoFishTimer}s)`;
+    elements.autoFishBtn.style.background = '#e74c3c';
+  }
+}
+
+function autoCatchFish() {
+  // Prevent auto-fishing if manual fishing is in progress
+  if (isFishing) return;
+  
+  if (elements.fishBtn) elements.fishBtn.disabled = true;
+  gameState.timesFished++;
+
+  const lure = getCurrentLure();
+  const tierResult = getFishByLureTier(lure ? lure.tier : 0);
+  const rarity = tierResult.rarity;
+  let fishName = tierResult.fishName;
+  const fishData = tierResult.raw || fishName;
+  let isTriforce = rarity.name === 'Triforce';
+
+  let isShiny = false;
+  if (gameState.pullsUntilShiny <= 1 && !isTriforce) {
+    isShiny = true;
+    gameState.pullsUntilShiny = 500;
+    fishName += ' (shiny)';
+  } else if (!isTriforce) gameState.pullsUntilShiny--;
+
+  const rupees = Math.floor(rarity.baseCurrency * 0.75);
+  const xp = Math.floor(rarity.xp * 0.75);
+
+  gameState.rupees += rupees;
+  gameState.xp += xp;
+  gameState.lifetimeFish++;
+
+  if (gameState.xp >= 100) {
+    gameState.xp -= 100;
+    gameState.level++;
   }
 
-  const activeRarities = Array.from(document.querySelectorAll('.rarity-filter:checked')).map(cb => cb.dataset.rarity);
-  const showShinyOnly = document.getElementById('shiny-filter')?.checked;
+  if (isTriforce && !gameState.collectedShards[fishData.id]) {
+    gameState.collectedShards[fishData.id] = fishData;
+  }
 
-  let table = document.createElement('table');
-  table.className = 'inventory-table';
-  table.style.width = '100%';
-  table.style.borderCollapse = 'collapse';
+  if (getTotalInventoryCount() < 100) addFishToInventory(fishName, rarity);
+
+  elements.fishingStatus.innerHTML = `
+    Auto-caught <span style="color:${rarity.color}">${fishName}</span>!
+    <br><span style="color:#ffd700; font-size:0.8em;">+${rupees} 💎 +${xp} XP (75%)</span>
+  `;
+
+  checkAchievements();
+  updateAllUI();
+  saveState();
+
+  setTimeout(() => {
+    if (elements.fishBtn) elements.fishBtn.disabled = false;
+  }, 500);
+}
+
+function stopAutoFish() {
+  if (autoFishInterval) clearInterval(autoFishInterval);
+  if (autoFishCountdown) clearInterval(autoFishCountdown);
+  autoFishInterval = null;
+  autoFishCountdown = null;
+
+  if (elements.autoFishBtn) {
+    elements.autoFishBtn.textContent = 'Auto Fish';
+    elements.autoFishBtn.style.background = '#8e44ad';
+  }
+}
+
+function updateAutoFishTimer() {
+  if (elements.autoFishBtn && autoFishInterval) {
+    elements.autoFishBtn.textContent = `Stop (${autoFishTimer}s)`;
+  }
+}
+
+// UI UPDATES
+function updateAllUI() {
+  if (elements.rupees) elements.rupees.textContent = formatNumber(gameState.rupees);
+  if (elements.mon) elements.mon.textContent = formatNumber(gameState.mon);
+  if (elements.lifetimeFish) elements.lifetimeFish.textContent = gameState.lifetimeFish;
+  if (elements.luck) elements.luck.textContent = (getTotalLuck() * 100).toFixed(1);
+  if (elements.reelSpeed) elements.reelSpeed.textContent = 100 + getReelSpeedBonus();
+  if (elements.shinyPull) elements.shinyPull.textContent = gameState.pullsUntilShiny;
   
-  let thead = document.createElement('thead');
-  let headerRow = document.createElement('tr');
+  if (elements.xpLevel) elements.xpLevel.textContent = gameState.level;
+  if (elements.xpProgress) elements.xpProgress.style.width = gameState.xp + '%';
+  if (elements.xpText) elements.xpText.textContent = `${gameState.xp}/100`;
   
-  const sortState = {
-    column: localStorage.getItem('inventorySortColumn') || '',
-    direction: localStorage.getItem('inventorySortDirection') || 'asc'
-  };
-
-  const headers = [
-    { text: 'Fish Name', key: 'name' },
-    { text: 'Rarity', key: 'rarity' },
-    { text: 'Count', key: 'count' },
-    { text: 'Make Shiny', key: 'shiny' }
-  ];
-
-  headers.forEach(header => {
-    let th = document.createElement('th');
-    if (header.key !== 'shiny') {
-      th.style.cursor = 'pointer';
-      th.style.position = 'relative';
-      th.innerHTML = `
-        ${header.text}
-        <svg class="sort-icon" style="width: 16px; height: 16px; margin-left: 5px; vertical-align: middle; opacity: ${sortState.column === header.key ? '1' : '0.3'};" viewBox="0 0 490 490" fill="#ffffff">
-          <g>
-            <polygon points="85.877,154.014 85.877,428.309 131.706,428.309 131.706,154.014 180.497,221.213 217.584,194.27 108.792,44.46 0,194.27 37.087,221.213"></polygon>
-            <polygon points="404.13,335.988 404.13,61.691 358.301,61.691 358.301,335.99 309.503,268.787 272.416,295.73 381.216,445.54 490,295.715 452.913,268.802"></polygon>
-          </g>
-        </svg>
-      `;
-      th.addEventListener('click', () => {
-        if (sortState.column === header.key) {
-          sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortState.column = header.key;
-          sortState.direction = 'asc';
-        }
-        localStorage.setItem('inventorySortColumn', sortState.column);
-        localStorage.setItem('inventorySortDirection', sortState.direction);
-        updateInventoryDisplay(searchTerm);
-      });
-    } else {
-      th.textContent = header.text;
+  updateUpgradesTab();
+  updateInventoryTab();
+  updateIndexTab();
+  updateTriforceTab();
+  updateAchievementsTab();
+  updateChestsTab();
+  updateShopTab();
+  
+  if (gameState.autoFishUnlocked && !elements.autoFishBtn) {
+    const container = document.getElementById('fish-btn-container');
+    if (container && !document.getElementById('auto-fish-btn')) {
+      elements.autoFishBtn = document.createElement('button');
+      elements.autoFishBtn.id = 'auto-fish-btn';
+      elements.autoFishBtn.className = 'pixel-btn';
+      elements.autoFishBtn.style.cssText = 'font-size: 1.2em; padding: 1em 2.5em; background: #8e44ad;';
+      elements.autoFishBtn.textContent = 'Auto Fish';
+      elements.autoFishBtn.addEventListener('click', toggleAutoFish);
+      container.appendChild(elements.autoFishBtn);
     }
-    headerRow.appendChild(th);
-  });
-  
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-  
-  let tbody = document.createElement('tbody');
-  let hasResults = false;
-  
-  let inventoryArray = Object.entries(inventory).map(([fishKey, entry]) => ({
-    key: fishKey,
-    ...entry
-  }));
+  }
+}
 
-  inventoryArray = inventoryArray.filter(entry => {
-    const isShiny = entry.fishName.endsWith(' (shiny)');
-    const isTriforce = entry.rarity.name === 'Triforce';
+function updateIndexTab() {
+  const container = document.getElementById('index-list');
+  if (!container) return;
+  
+  const searchInput = document.getElementById('index-search');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+  
+  if (Object.keys(gameState.fishIndex).length === 0) {
+    container.innerHTML = `
+      <div class="inventory-search" style="margin-bottom: 1em; display: flex; gap: 0.5em; justify-content: center;">
+        <input type="text" id="index-search" placeholder="Search fish..." style="padding: 0.5em 1em; font-family: 'Press Start 2P', Arial, sans-serif; font-size: 0.85em; background: #181c24; color: #fff; border: 2px solid #00bcd4; border-radius: 4px; outline: none; width: 300px;">
+        <button id="index-search-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em;">Search</button>
+        <button id="index-reset-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em; background: #23283a; border-color: #666; color: #999;">Reset</button>
+      </div>
+      <div class="inventory-filters" style="display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; margin-bottom: 1em; padding: 0.5em; background: #1d2232; border-radius: 4px;">
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Common">
+          <span class="checkmark"></span>
+          <span style="color: #b0c4b1;">Common</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Rare">
+          <span class="checkmark"></span>
+          <span style="color: #4299e1;">Rare</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Unique">
+          <span class="checkmark"></span>
+          <span style="color: #8e44ad;">Unique</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Epic">
+          <span class="checkmark"></span>
+          <span style="color: #e67e22;">Epic</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Legendary">
+          <span class="checkmark"></span>
+          <span style="color: #ffd700;">Legendary</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Mythical">
+          <span class="checkmark"></span>
+          <span style="color: #e84393;">Mythical</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" class="index-rarity-filter" data-rarity="Secret">
+          <span class="checkmark"></span>
+          <span style="color: #00bcd4; text-shadow: 0 0 8px #00bcd4, 0 0 12px #00bcd4;">Secret</span>
+        </label>
+        <label class="material-checkbox">
+          <input type="checkbox" id="index-shiny-filter">
+          <span class="checkmark"></span>
+          <span class="shiny-glow">Shiny</span>
+        </label>
+      </div>
+      <div style="padding: 2em; text-align: center; color: #aaa;">No fish collected yet!</div>
+    `;
     
-    if (searchTerm && !entry.fishName.toLowerCase().includes(searchTerm.toLowerCase())) {
+    const newSearchBtn = document.getElementById('index-search-btn');
+    const newResetBtn = document.getElementById('index-reset-btn');
+    const newSearchInput = document.getElementById('index-search');
+    
+    if (newSearchBtn && newSearchInput) {
+      newSearchBtn.addEventListener('click', () => updateIndexTab());
+      newSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') updateIndexTab();
+      });
+    }
+    
+    if (newResetBtn) {
+      newResetBtn.addEventListener('click', () => {
+        if (newSearchInput) newSearchInput.value = '';
+        document.querySelectorAll('.index-rarity-filter').forEach(f => f.checked = false);
+        const shinyFilter = document.getElementById('index-shiny-filter');
+        if (shinyFilter) shinyFilter.checked = false;
+        updateIndexTab();
+      });
+    }
+    return;
+  }
+  
+  const activeRarities = Array.from(document.querySelectorAll('.index-rarity-filter:checked')).map(cb => cb.dataset.rarity);
+  const showShinyOnly = document.getElementById('index-shiny-filter')?.checked || false;
+  
+  const filtered = Object.entries(gameState.fishIndex).filter(([name, data]) => {
+    const isShiny = name.includes('(shiny)');
+    
+    if (searchTerm && !name.toLowerCase().includes(searchTerm)) {
       return false;
     }
     
@@ -344,621 +878,633 @@ function updateInventoryDisplay(searchTerm = '') {
       return false;
     }
     
-    if (activeRarities.length > 0 && !activeRarities.includes(entry.rarity.name)) {
+    if (activeRarities.length > 0 && !activeRarities.includes(data.rarity.name)) {
       return false;
     }
     
     return true;
-  });
-
-  if (sortState.column) {
-    inventoryArray.sort((a, b) => {
-      let comparison = 0;
-      switch (sortState.column) {
-        case 'name':
-          comparison = a.fishName.localeCompare(b.fishName);
-          break;
-        case 'rarity':
-          const rarityA = fishRarities.findIndex(r => r.name === a.rarity.name);
-          const rarityB = fishRarities.findIndex(r => r.name === b.rarity.name);
-          const isShinyA = a.fishName.endsWith(' (shiny)');
-          const isShinyB = b.fishName.endsWith(' (shiny)');
-          
-          if (activeRarities.length > 0) {
-            if (isShinyA !== isShinyB) {
-              return isShinyA ? -1 : 1;
-            }
-          }
-          
-          if (isShinyA === isShinyB) {
-            comparison = rarityA - rarityB;
-          } else {
-            comparison = isShinyA ? 1 : -1;
-          }
-          break;
-        case 'count':
-          comparison = a.count - b.count;
-          break;
-      }
-      return sortState.direction === 'asc' ? comparison : -comparison;
-    });
-  }
-
-  inventoryArray.forEach(entry => {
-    hasResults = true;
-    let row = document.createElement('tr');
-    const isShiny = entry.fishName.endsWith(' (shiny)');
-    const isTriforce = entry.rarity.name === 'Triforce';
-    const shinyLabel = isShiny ? ` <span class="shiny-glow">(shiny)</span>` : '';
-    let nameTd = document.createElement('td');
-    nameTd.innerHTML = `<span style="color:${entry.rarity.color};font-weight:bold;">${entry.fishName.replace(' (shiny)','')}</span>${shinyLabel}`;
-    row.appendChild(nameTd);
-    
-    let rarityTd = document.createElement('td');
-    rarityTd.innerHTML = `<span style="color:${entry.rarity.color};font-weight:bold;">${entry.rarity.name}</span>`;
-    row.appendChild(rarityTd);
-    
-    let countTd = document.createElement('td');
-    countTd.textContent = entry.count;
-    row.appendChild(countTd);
-    
-    let shinyTd = document.createElement('td');
-    if (!isShiny && !isTriforce) {
-      const btn = document.createElement('button');
-      btn.className = 'shiny-craft-btn';
-      btn.textContent = 'Make Shiny';
-      btn.disabled = entry.count < 50;
-      btn.onclick = () => {
-        if (entry.count >= 50) {
-          inventory[entry.key].count -= 50;
-          
-          if (inventory[entry.key].count <= 0) {
-            delete inventory[entry.key];
-          }
-          
-          const shinyKey = `${entry.rarity.name}|${entry.fishName.replace(' (shiny)', '')} (shiny)`;
-          if (!inventory[shinyKey]) {
-            inventory[shinyKey] = { 
-              fishName: entry.fishName.replace(' (shiny)', '') + ' (shiny)', 
-              rarity: entry.rarity, 
-              count: 1,
-              key: shinyKey
-            };
-          } else {
-            inventory[shinyKey].count++;
-          }
-          
-          updateInventoryDisplay(document.getElementById('fish-search')?.value || '');
-          saveState();
-        }
-      };
-      shinyTd.appendChild(btn);
-    } else {
-      shinyTd.textContent = '-';
-    }
-    row.appendChild(shinyTd);
-    tbody.appendChild(row);
-  });
-  
-  if (!hasResults) {
-    inventoryList.textContent = 'No matching fish found.';
-    return;
-  }
-  
-  table.appendChild(tbody);
-  inventoryList.innerHTML = '';
-  inventoryList.appendChild(table);
-}
-
-// INDEX DISPLAY
-function updateIndexDisplay() {
-  const indexList = document.getElementById('index-list');
-  if (!indexList) return;
-
-  if (Object.keys(inventory).length === 0) {
-    indexList.textContent = 'No fish collected yet.';
-    return;
-  }
-
-  indexList.innerHTML = '';
-
-  fishRarities.forEach(rarity => {
-    const rarityFish = Object.values(inventory)
-      .filter(f => f.rarity.name === rarity.name)
-      .sort((a, b) => a.fishName.localeCompare(b.fishName));
-
-    if (rarityFish.length === 0) return;
-
-    const rarityHeader = document.createElement('h3');
-    rarityHeader.textContent = rarity.name;
-    rarityHeader.style.color = rarity.color;
-    rarityHeader.style.margin = '0.5em 0 0.2em 0';
-    indexList.appendChild(rarityHeader);
-
-    const ul = document.createElement('ul');
-    ul.style.listStyle = 'none';
-    ul.style.paddingLeft = '1em';
-    rarityFish.forEach(fish => {
-      const li = document.createElement('li');
-      const isShiny = fish.fishName.endsWith(' (shiny)');
-      li.innerHTML = `<span style="color:${rarity.color};font-weight:bold;">${fish.fishName.replace(' (shiny)','')}</span> (${fish.count})${isShiny ? ' ✨' : ''}`;
-      ul.appendChild(li);
-    });
-    indexList.appendChild(ul);
-  });
-}
-
-// STATS DISPLAY (replacing Mastery)
-function updateStatsDisplay() {
-  const statsList = document.getElementById('mastery-list');
-  if (!statsList) return;
-  
-  statsList.innerHTML = `
-    <h3 style="margin-bottom: 1em;">Fish Statistics</h3>
-    <div style="display: grid; gap: 1em;">
-      <div style="background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px;">
-        <div style="font-size: 1.5em; color: #ffd700;">${timesFished}</div><br>
-        <div style="color: #aaa; font-size: 0.9em;">Times Fished</div>
-      </div>
-      <div style="background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px;">
-        <div style="font-size: 1.5em; color: #4a90a4;">${lifetimeFishCount}</div><br>
-        <div style="color: #aaa; font-size: 0.9em;">Fish Caught</div>
-      </div>
-    </div>
-  `;
-}
-
-// Add search and filter functionality
-document.addEventListener('DOMContentLoaded', () => {
-  const searchInput = document.getElementById('fish-search');
-  const searchBtn = document.getElementById('search-btn');
-  const resetFiltersBtn = document.getElementById('reset-filters-btn');
-  const rarityFilters = document.querySelectorAll('.rarity-filter');
-  const shinyFilter = document.getElementById('shiny-filter');
-  
-  const updateWithFilters = () => {
-    updateInventoryDisplay(searchInput?.value || '');
-  };
-
-  const resetFilters = () => {
-    if (searchInput) searchInput.value = '';
-    
-    rarityFilters.forEach(filter => {
-      filter.checked = false;
-    });
-    
-    if (shinyFilter) shinyFilter.checked = false;
-    
-    localStorage.setItem('inventorySortColumn', 'rarity');
-    localStorage.setItem('inventorySortDirection', 'asc');
-    
-    updateInventoryDisplay();
-  };
-  
-  if (searchInput && searchBtn) {
-    searchBtn.addEventListener('click', updateWithFilters);
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        updateWithFilters();
-      }
-    });
-  }
-
-  if (resetFiltersBtn) {
-    resetFiltersBtn.addEventListener('click', resetFilters);
-  }
-  
-  rarityFilters.forEach(filter => {
-    filter.addEventListener('change', updateWithFilters);
-  });
-  
-  if (shinyFilter) {
-    shinyFilter.addEventListener('change', updateWithFilters);
-  }
-  
-  // Update stats display when tab is clicked
-  const masteryTab = document.querySelector('[data-tab="mastery"]');
-  if (masteryTab) {
-    masteryTab.addEventListener('click', updateStatsDisplay);
-  }
-});
-
-// Active potions store end times
-let activePotions = {
-  luck: 0,
-  reel: 0
-};
-
-const potionDuration = 5 * 60 * 1000;
-
-window.buyPotion = function(type) {
-  const cost = type === 'luck' ? 3000 : 5000;
-
-  if (currencyCount < cost) {
-    alert("Not enough rupees!");
-    return;
-  }
-
-  currencyCount -= cost;
-  coinCountSpan.textContent = formatNumber(currencyCount);
-  const now = Date.now();
-  activePotions[type] = now + potionDuration;
-
-  alert(`${type === 'luck' ? "Luck Potion" : "Reel Speed Potion"} activated for 5 minutes!`);
-  updateLuckDisplay();
-  updateReelSpeedCounter();
-  saveState();
-  updateTimers();
-}
-
-function updateTimers() {
-  const now = Date.now();
-
-  const luckElem = document.getElementById('luck-timer');
-  if (luckElem) {
-    if (activePotions.luck > now) {
-      const seconds = Math.ceil((activePotions.luck - now) / 1000);
-      const min = Math.floor(seconds / 60);
-      const sec = seconds % 60;
-      luckElem.textContent = `Luck Potion: ${min}:${sec.toString().padStart(2,'0')} remaining`;
-    } else {
-      luckElem.textContent = 'Inactive';
-    }
-  }
-
-  const reelElem = document.getElementById('reel-timer');
-  if (reelElem) {
-    if (activePotions.reel > now) {
-      const seconds = Math.ceil((activePotions.reel - now) / 1000);
-      const min = Math.floor(seconds / 60);
-      const sec = seconds % 60;
-      reelElem.textContent = `Reel Speed Potion: ${min}:${sec.toString().padStart(2,'0')} remaining`;
-    } else {
-      reelElem.textContent = 'Inactive';
-    }
-  }
-  
-  updateLuckDisplay();
-  updateReelSpeedCounter();
-}
-
-setInterval(updateTimers, 1000);
-
-function getFishingTime() {
-  const baseTime = 5000;
-  const reelBonus = getReelSpeedBonus();
-  const reduction = Math.min(reelBonus * 0.02, 0.90);
-  return Math.max(baseTime * (1 - reduction), 500);
-}
-
-function catchFish() {
-  // Anti-autoclicker
-  const now = Date.now();
-  if (now - lastClickTime < 100) {
-    clickCount++;
-    if (clickCount > 10) {
-      fishingStatus.textContent = '⚠️ Suspicious clicking detected!';
-      setTimeout(() => {
-        fishingStatus.textContent = 'Ready to fish!';
-      }, 2000);
-      return;
-    }
-  } else {
-    clickCount = 0;
-  }
-  lastClickTime = now;
-
-  const fishBtn = document.getElementById('fish-btn');
-  if (fishBtn) fishBtn.disabled = true;
-  fishingStatus.textContent = 'Fishing...';
-  timesFished++;
-  
-  const fishImg = document.getElementById('main-fish-img');
-  if (fishImg) {
-    fishImg.classList.remove('pulse');
-    void fishImg.offsetWidth;
-    fishImg.classList.add('pulse');
-  }
-  
-  const fishingTime = getFishingTime();
-  
-  setTimeout(() => {
-    fishCount++;
-    lifetimeFishCount++;
-    pullsUntilShiny--;
-    
-    if (lifetimeFishCountSpan) lifetimeFishCountSpan.textContent = lifetimeFishCount;
-    
-    const rarity = getRandomRarity();
-    let fishData = getRandomFish(rarity);
-    
-    let displayName = fishData;
-    let isTriforce = false;
-    let shardData = null;
-    
-    if (typeof fishData === 'object' && fishData.name) {
-      displayName = fishData.name;
-      isTriforce = true;
-      shardData = fishData;
-      
-      // Collect triforce shard
-      if (!collectedShards[fishData.id]) {
-        collectedShards[fishData.id] = fishData;
-        updateTriforceUI();
-        updateLuckDisplay();
-        updateReelSpeedCounter();
-      }
-    }
-
-    let isShiny = false;
-    if (pullsUntilShiny <= 0 && !isTriforce) {
-      isShiny = true;
-      pullsUntilShiny = 500;
-      displayName += ' (shiny)';
-    }
-
-    fishingStatus.innerHTML = `Caught a <span style="color:${rarity.color}; font-weight:bold;">${rarity.name}</span> <span style="font-style:italic">${displayName}</span>!`;
-
-    currencyCount += rarity.baseCurrency;
-    coinCountSpan.textContent = formatNumber(currencyCount);
-    
-    if (typeof rarity.xp === 'number') {
-      xp += rarity.xp;
-      if (xp >= 100) {
-        xp = xp - 100;
-        level = Math.min(level + 1, maxLevel);
-      }
-      updateXPBar();
-    }
-    
-    updateCoinAndAutoFishTile();
-    updateAutoFishCostColor();
-    updateReelSpeedButtons();
-    updateLuckButtons();
-    updateShinyPullCounter();
-    updateIndexDisplay();
-    updateStatsDisplay();
-    saveState();
-    
-    const coinDiv = coinCountSpan.parentElement;
-    let animContainer = document.getElementById('coin-anim-container');
-    if (!animContainer) {
-      animContainer = document.createElement('div');
-      animContainer.id = 'coin-anim-container';
-      animContainer.style.position = 'absolute';
-      animContainer.style.left = '100%';
-      animContainer.style.top = '50%';
-      animContainer.style.transform = 'translateY(-50%)';
-      animContainer.style.pointerEvents = 'none';
-      animContainer.style.width = '70px';
-      animContainer.style.height = '32px';
-      coinDiv.style.position = 'relative';
-      coinDiv.appendChild(animContainer);
-    }
-    const animation = document.createElement('span');
-    animation.textContent = `+${rarity.baseCurrency}`;
-    animation.style.color = '#ffd700';
-    animation.style.fontSize = '1.1em';
-    animation.style.fontWeight = 'bold';
-    animation.style.position = 'absolute';
-    animation.style.left = '0';
-    animation.style.top = '0';
-    animation.style.opacity = '1';
-    animation.style.transition = 'opacity 1s, transform 1s';
-    animContainer.appendChild(animation);
-    setTimeout(() => {
-      animation.style.opacity = '0';
-      animation.style.transform = 'translateY(-24px)';
-    }, 20);
-    setTimeout(() => {
-      animation.remove();
-    }, 1020);
-    
-    if (coinCountSpan) {
-      coinCountSpan.classList.add('counter-number');
-      wobbleElement(coinCountSpan);
-    }
-    
-    const fishKey = `${rarity.name}|${displayName}`;
-    if (!inventory[fishKey]) {
-      inventory[fishKey] = { fishName: displayName, rarity, count: 1 };
-    } else {
-      inventory[fishKey].count++;
-    }
-    
-    addRecentFish(displayName, 1);
-    updateInventoryDisplay();
-    saveState();
-    animateRecentFish();
-    
-    setTimeout(() => {
-      fishingStatus.textContent = 'Ready to fish!';
-      if (fishBtn) fishBtn.disabled = false;
-    }, 3000);
-  }, fishingTime);
-}
-
-// CHESTS (replacing Crates)
-function setupChests() {
-  const cratesList = document.getElementById('crates-list');
-  if (!cratesList) return;
-  
-  cratesList.innerHTML = `
-    <h3 style="margin-bottom: 1em;">Treasure Chests</h3>
-    <div style="display: grid; gap: 1em;">
-      <div style="background: rgba(0,0,0,0.3); padding: 1.5em; border-radius: 8px; border: 2px solid #8B7355;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1em; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 1em;">
-            <img src="assets/smallchest.png" alt="Small Chest" style="width: 64px; height: 64px; image-rendering: pixelated;">
-            <div>
-              <div style="font-size: 1.3em; margin-bottom: 0.3em;">Small Chest</div>
-              <div style="color: #aaa; font-size: 0.9em;">Cost: 50 Mon</div>
-              <div style="color: #aaa; font-size: 0.8em; margin-top: 0.3em;">Rewards: 100-600 Rupees</div>
-            </div>
-          </div>
-          <button id="buy-small-chest" class="pixel-btn" style="padding: 0.8em 1.5em;">Open</button>
-        </div>
-      </div>
-      
-      <div style="background: rgba(0,0,0,0.3); padding: 1.5em; border-radius: 8px; border: 2px solid #C0C0C0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1em; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 1em;">
-            <img src="assets/bigchest.png" alt="Big Chest" style="width: 64px; height: 64px; image-rendering: pixelated;">
-            <div>
-              <div style="font-size: 1.3em; margin-bottom: 0.3em;">Big Chest</div>
-              <div style="color: #aaa; font-size: 0.9em;">Cost: 100 Mon</div>
-              <div style="color: #aaa; font-size: 0.8em; margin-top: 0.3em;">Rewards: Mon, Luck Boost, or Rupees</div>
-            </div>
-          </div>
-          <button id="buy-big-chest" class="pixel-btn" style="padding: 0.8em 1.5em;">Open</button>
-        </div>
-      </div>
-      
-      <div style="background: rgba(0,0,0,0.3); padding: 1.5em; border-radius: 8px; border: 2px solid #FFD700;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1em; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 1em;">
-            <img src="assets/bosschest.png" alt="Boss Chest" style="width: 64px; height: 64px; image-rendering: pixelated;">
-            <div>
-              <div style="font-size: 1.3em; margin-bottom: 0.3em;">Boss Chest</div>
-              <div style="color: #aaa; font-size: 0.9em;">Cost: 250 Mon</div>
-              <div style="color: #aaa; font-size: 0.8em; margin-top: 0.3em;">Rewards: Shards, Reel Speed, Luck, or Mon</div>
-            </div>
-          </div>
-          <button id="buy-boss-chest" class="pixel-btn" style="padding: 0.8em 1.5em;">Open</button>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('buy-small-chest')?.addEventListener('click', () => openChest('small'));
-  document.getElementById('buy-big-chest')?.addEventListener('click', () => openChest('big'));
-  document.getElementById('buy-boss-chest')?.addEventListener('click', () => openChest('boss'));
-}
-
-function openChest(type) {
-  const costs = { small: 50, big: 100, boss: 250 };
-  const cost = costs[type];
-  
-  if (gemCount < cost) {
-    alert('Not enough Mon!');
-    return;
-  }
-  
-  gemCount -= cost;
-  gemCountSpan.textContent = formatNumber(gemCount);
-  
-  let rewardText = '';
-  const rand = Math.random();
-  
-  if (type === 'small') {
-    const rupees = Math.floor(Math.random() * 501) + 100;
-    currencyCount += rupees;
-    rewardText = `${rupees} Rupees`;
-  } else if (type === 'big') {
-    if (rand < 0.3) {
-      const mon = Math.floor(Math.random() * 21) + 10;
-      gemCount += mon;
-      rewardText = `${mon} Mon`;
-    } else if (rand < 0.5) {
-      const luck = Math.floor(Math.random() * 5) + 1;
-      rewardText = `+${luck}% Luck Boost (temporary - not implemented yet)`;
-    } else {
-      const rupees = Math.floor(Math.random() * 1001) + 500;
-      currencyCount += rupees;
-      rewardText = `${rupees} Rupees`;
-    }
-  } else { // boss
-    if (rand < 0.2) {
-      const uncollectedShards = fishList.Triforce.filter(s => !collectedShards[s.id]);
-      if (uncollectedShards.length > 0) {
-        const shard = uncollectedShards[Math.floor(Math.random() * uncollectedShards.length)];
-        collectedShards[shard.id] = shard;
-        updateTriforceUI();
-        updateLuckDisplay();
-        updateReelSpeedCounter();
-        rewardText = `${shard.name}! (+${shard.type === 'luck' ? (shard.value * 100) + '%' : shard.value} ${shard.type})`;
-      } else {
-        const mon = Math.floor(Math.random() * 51) + 50;
-        gemCount += mon;
-        rewardText = `${mon} Mon (all shards collected!)`;
-      }
-    } else if (rand < 0.4) {
-      const speed = Math.floor(Math.random() * 6) + 5;
-      rewardText = `+${speed} Reel Speed (temporary - not implemented yet)`;
-    } else if (rand < 0.6) {
-      const luck = Math.floor(Math.random() * 5) + 1;
-      rewardText = `+${luck}% Luck (temporary - not implemented yet)`;
-    } else {
-      const mon = Math.floor(Math.random() * 51) + 30;
-      gemCount += mon;
-      rewardText = `${mon} Mon`;
-    }
-  }
-  
-  coinCountSpan.textContent = formatNumber(currencyCount);
-  gemCountSpan.textContent = formatNumber(gemCount);
-  saveState();
-  
-  alert(`Chest Opened! You received: ${rewardText}`);
-}
-
-// SHOP
-function setupShop() {
-  const shopList = document.getElementById('shop-list');
-  if (!shopList) return;
-  
-  shopList.innerHTML = '<h3 style="margin-bottom: 1em;">Fish Shop</h3><div id="shop-inventory"></div>';
-  updateShopDisplay();
-}
-
-function updateShopDisplay() {
-  const shopInventory = document.getElementById('shop-inventory');
-  if (!shopInventory) return;
-  
-  const sellableFish = Object.entries(inventory).filter(([key, fish]) => {
-    return fish.rarity.name !== 'Triforce' && fish.count > 0;
   }).sort((a, b) => {
     const rarityA = fishRarities.findIndex(r => r.name === a[1].rarity.name);
     const rarityB = fishRarities.findIndex(r => r.name === b[1].rarity.name);
     return rarityB - rarityA;
   });
   
-  if (sellableFish.length === 0) {
-    shopInventory.innerHTML = '<div style="padding: 2em; text-align: center; color: #aaa;">No fish to sell!</div>';
+  container.innerHTML = `
+    <div class="inventory-search" style="margin-bottom: 1em; display: flex; gap: 0.5em; justify-content: center;">
+      <input type="text" id="index-search" placeholder="Search fish..." value="${searchTerm}" style="padding: 0.5em 1em; font-family: 'Press Start 2P', Arial, sans-serif; font-size: 0.85em; background: #181c24; color: #fff; border: 2px solid #00bcd4; border-radius: 4px; outline: none; width: 300px;">
+      <button id="index-search-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em;">Search</button>
+      <button id="index-reset-btn" class="pixel-btn" style="padding: 0.5em 1.2em; font-size: 0.85em; background: #23283a; border-color: #666; color: #999;">Reset</button>
+    </div>
+    <div class="inventory-filters" style="display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; margin-bottom: 1em; padding: 0.5em; background: #1d2232; border-radius: 4px;">
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Common" ${activeRarities.includes('Common') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #b0c4b1;">Common</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Rare" ${activeRarities.includes('Rare') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #4299e1;">Rare</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Unique" ${activeRarities.includes('Unique') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #8e44ad;">Unique</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Epic" ${activeRarities.includes('Epic') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #e67e22;">Epic</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Legendary" ${activeRarities.includes('Legendary') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #ffd700;">Legendary</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Mythical" ${activeRarities.includes('Mythical') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #e84393;">Mythical</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" class="index-rarity-filter" data-rarity="Secret" ${activeRarities.includes('Secret') ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span style="color: #00bcd4; text-shadow: 0 0 8px #00bcd4, 0 0 12px #00bcd4;">Secret</span>
+      </label>
+      <label class="material-checkbox">
+        <input type="checkbox" id="index-shiny-filter" ${showShinyOnly ? 'checked' : ''}>
+        <span class="checkmark"></span>
+        <span class="shiny-glow">Shiny</span>
+      </label>
+    </div>
+    <div id="index-results" style="width: 100%; height: 550px; overflow-y: auto; padding-right: 10px;" class="style-7"></div>
+  `;
+  
+  const resultsDiv = document.getElementById('index-results');
+  
+  if (filtered.length === 0) {
+    resultsDiv.innerHTML = '<div style="padding: 2em; text-align: center; color: #aaa;">No matching fish found.</div>';
+  } else {
+    filtered.forEach(([name, data]) => {
+      const isShiny = name.includes('(shiny)');
+      const cleanName = name.replace(' (shiny)', '');
+      
+      const div = document.createElement('div');
+      div.style.cssText = `
+        background: rgba(0,0,0,0.3);
+        padding: 1em;
+        margin-bottom: 0.8em;
+        border-radius: 8px;
+        border: 2px solid ${data.rarity.color};
+        ${isShiny ? 'box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);' : ''}
+        display: flex;
+        align-items: center;
+        gap: 1em;
+      `;
+      
+      div.innerHTML = `
+        <img src="${getFishImage(cleanName)}" alt="${cleanName}" 
+          style="width: 48px; height: 48px; image-rendering: pixelated;">
+        <div style="flex: 1;">
+          <div style="color: ${data.rarity.color}; font-weight: bold; margin-bottom: 0.3em;">
+            ${isShiny ? '✨ ' : ''}${cleanName}
+          </div>
+          <div style="color: #aaa; font-size: 0.85em;">
+            Rarity: ${data.rarity.name} | Caught: ${data.count} times
+          </div>
+        </div>
+      `;
+      
+      resultsDiv.appendChild(div);
+    });
+  }
+  
+  const newSearchBtn = document.getElementById('index-search-btn');
+  const newResetBtn = document.getElementById('index-reset-btn');
+  const newSearchInput = document.getElementById('index-search');
+  
+  if (newSearchBtn && newSearchInput) {
+    newSearchBtn.addEventListener('click', () => updateIndexTab());
+    newSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') updateIndexTab();
+    });
+  }
+  
+  if (newResetBtn) {
+    newResetBtn.addEventListener('click', () => {
+      if (newSearchInput) newSearchInput.value = '';
+      document.querySelectorAll('.index-rarity-filter').forEach(f => f.checked = false);
+      const shinyFilter = document.getElementById('index-shiny-filter');
+      if (shinyFilter) shinyFilter.checked = false;
+      updateIndexTab();
+    });
+  }
+  
+  document.querySelectorAll('.index-rarity-filter').forEach(filter => {
+    filter.addEventListener('change', () => updateIndexTab());
+  });
+  
+  const shinyFilter = document.getElementById('index-shiny-filter');
+  if (shinyFilter) {
+    shinyFilter.addEventListener('change', () => updateIndexTab());
+  }
+}
+
+function updateUpgradesTab() {
+  const container = document.getElementById('upgrade-list');
+  if (!container) return;
+  
+  const upgrades = [
+    { 
+      name: 'Auto Fish', 
+      desc: 'Automatically catches fish every 3 seconds',
+      cost: 50000, 
+      level: gameState.autoFishUnlocked ? 1 : 0, 
+      max: 1,
+      buy: () => {
+        gameState.rupees -= 50000;
+        gameState.totalSpent += 50000;
+        gameState.autoFishUnlocked = true;
+        updateAllUI();
+        saveState();
+        checkAchievements();
+      }
+    },
+    {
+      name: `Reel Speed`,
+      desc: `Reduces fishing time by ${[32, 64, 100][gameState.reelSpeedLevel] || 32}%`,
+      cost: [10000, 25000, 50000][gameState.reelSpeedLevel],
+      level: gameState.reelSpeedLevel,
+      max: 3,
+      buy: () => {
+        const cost = [10000, 25000, 50000][gameState.reelSpeedLevel];
+        gameState.rupees -= cost;
+        gameState.totalSpent += cost;
+        gameState.reelSpeedLevel++;
+        updateAllUI();
+        saveState();
+        checkAchievements();
+      }
+    },
+    {
+      name: `Luck`,
+      desc: `Increases rare fish chance by ${((gameState.luckLevel + 1) * 3.33).toFixed(1)}%`,
+      cost: [15000, 30000, 75000][gameState.luckLevel],
+      level: gameState.luckLevel,
+      max: 3,
+      buy: () => {
+        const cost = [15000, 30000, 75000][gameState.luckLevel];
+        gameState.rupees -= cost;
+        gameState.totalSpent += cost;
+        gameState.luckLevel++;
+        updateAllUI();
+        saveState();
+        checkAchievements();
+      }
+    }
+  ];
+  
+  container.innerHTML = '<h3 style="margin-bottom: 1em;">Upgrades</h3>';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display: grid; gap: 1em;';
+  
+  upgrades.forEach(up => {
+    const canAfford = gameState.rupees >= up.cost;
+    const isMaxed = up.level >= up.max;
+    
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background: rgba(0,0,0,0.3);
+      padding: 1.5em;
+      border-radius: 8px;
+      border: 2px solid ${isMaxed ? '#23d160' : '#4a90a4'};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1em;
+    `;
+    
+    const romanNumerals = ['I', 'II', 'III'];
+    const displayName = up.max > 1 && up.level < up.max ? `${up.name} ${romanNumerals[up.level]}` : up.name;
+    
+    div.innerHTML = `
+      <div>
+        <div style="font-size: 1.2em; margin-bottom: 0.3em;">${displayName}</div>
+        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 0.5em;">${up.desc}</div>
+        <div style="color: ${isMaxed ? '#23d160' : '#ffd700'}; font-size: 0.9em;">
+          ${isMaxed ? 'MAX LEVEL' : `Cost: ${formatNumber(up.cost)} 💎`}
+        </div>
+      </div>
+      <button class="pixel-btn" ${isMaxed || !canAfford ? 'disabled' : ''} 
+        style="padding: 0.8em 1.5em; background: ${isMaxed ? '#666' : canAfford ? '#23d160' : '#666'};">
+        ${isMaxed ? 'Maxed' : canAfford ? 'Buy' : 'Locked'}
+      </button>
+    `;
+    
+    const btn = div.querySelector('button');
+    if (!isMaxed && canAfford) {
+      btn.addEventListener('click', up.buy);
+    }
+    
+    grid.appendChild(div);
+  });
+  
+  container.appendChild(grid);
+}
+
+function updateInventoryTab() {
+  const container = document.getElementById('inventory-list');
+  if (!container) return;
+  
+  const entries = Object.entries(gameState.inventory)
+    .filter(([_, fish]) => fish.count > 0)
+    .sort((a, b) => {
+      const rarityA = fishRarities.findIndex(r => r.name === a[1].rarity.name);
+      const rarityB = fishRarities.findIndex(r => r.name === b[1].rarity.name);
+      return rarityB - rarityA;
+    });
+  
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="padding: 2em; text-align: center; color: #aaa;">No fish yet!</div>';
     return;
   }
   
-  shopInventory.innerHTML = '';
+  container.innerHTML = '';
   
-  sellableFish.forEach(([key, fish]) => {
-    const fishDiv = document.createElement('div');
-    fishDiv.style.background = 'rgba(0,0,0,0.3)';
-    fishDiv.style.padding = '1em';
-    fishDiv.style.marginBottom = '0.8em';
-    fishDiv.style.borderRadius = '8px';
-    fishDiv.style.display = 'flex';
-    fishDiv.style.justifyContent = 'space-between';
-    fishDiv.style.alignItems = 'center';
-    fishDiv.style.flexWrap = 'wrap';
-    fishDiv.style.gap = '0.5em';
+  entries.forEach(([key, fish]) => {
+    const isShiny = fish.fishName.includes('(shiny)');
+    const isTriforce = fish.rarity.name === 'Triforce';
+    const cleanName = fish.fishName.replace(' (shiny)', '');
     
-    fishDiv.innerHTML = `
-    <div>
-      <div style="color: ${fish.rarity.color}; font-weight: bold; margin-bottom: 0.3em;">${fish.fishName}</div>
-      <div style="color: #aaa; font-size: 0.9em;">Count: ${fish.count}</div>
-    </div>
-    <div style="display: flex; gap: 0.5em; align-items: center;">
-      <button class="sell-rupee-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #4a90a4; display: flex; align-items: center; gap: 0.3em;">
-        Sell for ${fish.rarity.baseCurrency} <img src="assets/coin.png" alt="Rupees" style="width: 16px; height: 16px;">
-      </button>
-      <button class="sell-mon-btn pixel-btn" data-key="${key}" style="padding: 0.5em 1em; background: #8e44ad; display: flex; align-items: center; gap: 0.3em;">
-        Sell for ${fish.rarity.monValue} <img src="assets/gem.png" alt="Mon" style="width: 16px; height: 16px;">
-      </button>
-    </div>
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background: rgba(0,0,0,0.3);
+      padding: 1em;
+      margin-bottom: 0.8em;
+      border-radius: 8px;
+      border: 2px solid ${fish.rarity.color};
+      ${isShiny ? 'box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);' : ''}
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1em;
+      flex-wrap: wrap;
     `;
     
-    shopInventory.appendChild(fishDiv);
+    div.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 1em;">
+        <img src="${getFishImage(cleanName)}" alt="${cleanName}" 
+          style="width: 48px; height: 48px; image-rendering: pixelated;">
+        <div>
+          <div style="color: ${fish.rarity.color}; font-weight: bold;">
+            ${isShiny ? '✨ ' : ''}${cleanName}
+          </div>
+          <div style="color: #aaa; font-size: 0.9em;">Count: ${fish.count}/50</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5em;">
+        ${!isShiny && !isTriforce && fish.count >= 10 ? `
+          <button class="pixel-btn shiny-craft-btn" data-key="${key}" 
+            style="padding: 0.5em 1em; background: #8e44ad;">
+            Make Shiny
+          </button>
+        ` : ''}
+      </div>
+    `;
+    
+    container.appendChild(div);
   });
+  
+  document.querySelectorAll('.shiny-craft-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const fish = gameState.inventory[key];
+      
+      if (!fish || fish.count < 10) return; // Prevent exploit
+      
+      gameState.inventory[key].count -= 10;
+      if (gameState.inventory[key].count === 0) {
+        delete gameState.inventory[key];
+      }
+      
+      const shinyKey = `${fish.rarity.name}|${fish.fishName} (shiny)`;
+      if (!gameState.inventory[shinyKey]) {
+        gameState.inventory[shinyKey] = {
+          fishName: fish.fishName + ' (shiny)',
+          rarity: fish.rarity,
+          count: 1
+        };
+      } else {
+        gameState.inventory[shinyKey].count++;
+        if (gameState.inventory[shinyKey].count > 50) {
+          gameState.inventory[shinyKey].count = 50;
+        }
+      }
+      
+      // Update fishIndex for shiny
+      const shinyName = fish.fishName + ' (shiny)';
+      if (!gameState.fishIndex[shinyName]) {
+        gameState.fishIndex[shinyName] = { rarity: fish.rarity, count: 0, unlocked: true };
+      }
+      gameState.fishIndex[shinyName].count++;
+      
+      checkAchievements();
+      updateAllUI();
+      saveState();
+    });
+  });
+}
+
+function updateTriforceTab() {
+  const container = document.getElementById('relics-list');
+  if (!container) return;
+  
+  container.innerHTML = '<h3 style="margin-bottom: 1em;">Triforce Shards</h3>';
+  
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1em;';
+  
+  fishList.Triforce.forEach(shard => {
+    const collected = !!gameState.collectedShards[shard.id];
+    
+    const div = document.createElement('div');
+    div.style.cssText = `
+      padding: 1em;
+      border: 2px solid ${collected ? '#ffd700' : '#666'};
+      border-radius: 10px;
+      background: rgba(0,0,0,0.3);
+      text-align: center;
+      transition: all 0.3s;
+    `;
+    
+    div.innerHTML = `
+      <img src="assets/Triforce_Shard_${shard.id}.png" alt="Shard ${shard.id}"
+        style="width: 64px; height: 64px; image-rendering: pixelated; 
+        ${collected ? '' : 'filter: grayscale(100%) brightness(0.5);'}">
+      <div style="margin-top: 0.5em; font-size: 0.8em; color: ${collected ? '#ffd700' : '#aaa'};">${shard.name}</div>
+      <div style="margin-top: 0.3em; color: ${collected ? '#ffd700' : '#666'}; font-size: 0.7em;">
+        ${shard.type === 'luck' ? `+${shard.value * 100}% Luck` : `+${shard.value} Reel Speed`}
+      </div>
+    `;
+    
+    grid.appendChild(div);
+  });
+  
+  container.appendChild(grid);
+}
+
+function updateAchievementsTab() {
+  const container = document.getElementById('mastery-list');
+  if (!container) return;
+  
+  container.innerHTML = '<h3 style="margin-bottom: 1em;">Achievements</h3>';
+  
+  Object.keys(ACHIEVEMENTS).forEach(category => {
+    const categoryDiv = document.createElement('div');
+    categoryDiv.style.marginBottom = '2em';
+   
+    
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display: grid; gap: 0.8em;';
+    
+    Object.values(ACHIEVEMENTS[category]).forEach(ach => {
+      const div = document.createElement('div');
+      div.style.cssText = `
+        background: rgba(0,0,0,0.3);
+        padding: 1em;
+        border-radius: 8px;
+        border: 2px solid ${ach.unlocked ? '#ffd700' : '#666'};
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1em;
+        ${ach.unlocked ? 'box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);' : ''}
+      `;
+      
+      div.innerHTML = `
+        <div>
+          <div style="font-weight: bold; margin-bottom: 0.3em;">
+            ${ach.unlocked ? '🏆 ' : '🔒 '}${ach.name}
+          </div>
+          <div style="color: #aaa; font-size: 0.85em;">${ach.desc}</div>
+        </div>
+        <div style="color: ${ach.unlocked ? '#ffd700' : '#666'}; font-weight: bold; white-space: nowrap; display: flex; align-items: center; gap: 0.3em;">
+          <img src="assets/gem.png" alt="Mon" style="width: 20px; height: 20px; image-rendering: pixelated;">
+          ${ach.reward}
+        </div>
+      `;
+      
+      grid.appendChild(div);
+    });
+    
+    categoryDiv.appendChild(grid);
+    container.appendChild(categoryDiv);
+  });
+}
+
+function updateChestsTab() {
+  const container = document.getElementById('crates-list');
+  if (!container) return;
+  
+  const chests = [
+    { name: 'Small Chest', cost: 50, img: 'smallchest.png', type: 'small', desc: '100-600 Rupees' },
+    { name: 'Big Chest', cost: 100, img: 'bigchest.png', type: 'big', desc: '10-30 Mon or 500-1500 Rupees' },
+    { name: 'Boss Chest', cost: 250, img: 'bosschest.png', type: 'boss', desc: 'Triforce Shard or 30-80 Mon' }
+  ];
+  
+  container.innerHTML = '<h3 style="margin-bottom: 1em;">Treasure Chests</h3>';
+  
+  chests.forEach(chest => {
+    const canAfford = gameState.mon >= chest.cost;
+    
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background: rgba(0,0,0,0.3);
+      padding: 1.5em;
+      border-radius: 8px;
+      border: 2px solid ${canAfford ? '#8e44ad' : '#666'};
+      margin-bottom: 1em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1em;
+      flex-wrap: wrap;
+    `;
+    
+    div.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 1em;">
+        <img src="assets/${chest.img}" alt="${chest.name}"
+          style="width: 64px; height: 64px; image-rendering: pixelated;">
+        <div>
+          <div style="font-size: 1.2em; margin-bottom: 0.3em;">${chest.name}</div>
+          <div style="color: #aaa; font-size: 0.85em; margin-bottom: 0.5em;">Rewards: ${chest.desc}</div>
+          <div style="color: #ffd700; font-size: 0.9em; display: flex; align-items: center; gap: 0.3em;">
+            Cost: <img src="assets/gem.png" alt="Mon" style="width: 16px; height: 16px; image-rendering: pixelated;"> ${chest.cost}
+          </div>
+        </div>
+      </div>
+      <button class="pixel-btn open-chest-btn" data-type="${chest.type}" ${canAfford ? '' : 'disabled'}
+        style="padding: 0.8em 1.5em; background: ${canAfford ? '#8e44ad' : '#666'};">
+        ${canAfford ? 'Open' : 'Locked'}
+      </button>
+    `;
+    
+    container.appendChild(div);
+  });
+  
+  document.querySelectorAll('.open-chest-btn').forEach(btn => {
+    btn.addEventListener('click', () => openChest(btn.dataset.type));
+  });
+}
+
+function openChest(type) {
+  const costs = { small: 50, big: 100, boss: 250 };
+  const cost = costs[type];
+  
+  if (gameState.mon < cost) return;
+  
+  gameState.mon -= cost;
+  gameState.monSpent += cost;
+  
+  let reward = '';
+  const rand = Math.random();
+  
+  if (type === 'small') {
+    const rupees = Math.floor(Math.random() * 501) + 100;
+    gameState.rupees += rupees;
+    reward = `${rupees} Rupees`;
+  } else if (type === 'big') {
+    if (rand < 0.3) {
+      const luckBoost = (Math.floor(Math.random() * 5) + 1) / 100;
+      gameState.temporaryBoosts.luck += luckBoost;
+      reward = `+${(luckBoost * 100).toFixed(0)}% Luck Boost`;
+    } else if (rand < 0.5) {
+      const mon = Math.floor(Math.random() * 21) + 10;
+      gameState.mon += mon;
+      reward = `${mon} Mon`;
+    } else {
+      const rupees = Math.floor(Math.random() * 1001) + 500;
+      gameState.rupees += rupees;
+      reward = `${rupees} Rupees`;
+    }
+  } else if (type === 'boss') {
+    if (rand < 0.2) {
+      const uncollected = fishList.Triforce.filter(s => !gameState.collectedShards[s.id]);
+      if (uncollected.length > 0) {
+        const shard = uncollected[Math.floor(Math.random() * uncollected.length)];
+        gameState.collectedShards[shard.id] = shard;
+        reward = `${shard.name}!`;
+      } else {
+        const mon = Math.floor(Math.random() * 51) + 50;
+        gameState.mon += mon;
+        reward = `${mon} Mon`;
+      }
+    } else if (rand < 0.4) {
+      const speedBoost = Math.floor(Math.random() * 6) + 5;
+      gameState.temporaryBoosts.reelSpeed += speedBoost;
+      reward = `+${speedBoost} Reel Speed Boost`;
+    } else {
+      const mon = Math.floor(Math.random() * 51) + 30;
+      gameState.mon += mon;
+      reward = `${mon} Mon`;
+    }
+  }
+  
+  showNotification(`Chest opened! Received: ${reward}`);
+  checkAchievements();
+  updateAllUI();
+  saveState();
+}
+
+function updateShopTab() {
+  const container = document.getElementById('shop-list');
+  if (!container) return;
+  
+  const sellable = Object.entries(gameState.inventory)
+    .filter(([_, fish]) => fish.count > 0 && fish.rarity.name !== 'Triforce')
+    .sort((a, b) => {
+      const rarityA = fishRarities.findIndex(r => r.name === a[1].rarity.name);
+      const rarityB = fishRarities.findIndex(r => r.name === b[1].rarity.name);
+      return rarityB - rarityA;
+    });
+  
+  if (sellable.length === 0) {
+    container.innerHTML = '<div style="padding: 2em; text-align: center; color: #aaa;">No fish to sell!</div>';
+    return;
+  }
+  
+  let totalRupees = 0;
+  let totalMon = 0;
+  
+  sellable.forEach(([_, fish]) => {
+    const rupees = fish.rarity.baseCurrency || 0;
+    const mon = fish.rarity.monValue || 0;
+    totalRupees += rupees * fish.count;
+    totalMon += mon * fish.count;
+  });
+  
+  container.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em; flex-wrap: wrap; gap: 0.5em;">
+      <h3>Fish Shop</h3>
+      <div style="display: flex; gap: 0.5em;">
+        <button id="sell-all-rupees-btn" class="pixel-btn" style="padding: 0.8em 1.5em; background: #4a90a4; display: flex; align-items: center; gap: 0.3em;">
+          <img src="assets/coin.png" style="width: 20px; height: 20px; image-rendering: pixelated;">
+          Sell All (${formatNumber(totalRupees)})
+        </button>
+        <button id="sell-all-mon-btn" class="pixel-btn" style="padding: 0.8em 1.5em; background: #8e44ad; display: flex; align-items: center; gap: 0.3em;">
+          <img src="assets/gem.png" style="width: 20px; height: 20px; image-rendering: pixelated;">
+          Sell All (${formatNumber(totalMon)})
+        </button>
+      </div>
+    </div>
+  `;
+  
+  const listDiv = document.createElement('div');
+  
+  sellable.forEach(([key, fish]) => {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background: rgba(0,0,0,0.3);
+      padding: 1em;
+      margin-bottom: 0.8em;
+      border-radius: 8px;
+      border: 2px solid ${fish.rarity.color};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1em;
+      flex-wrap: wrap;
+    `;
+    
+    div.innerHTML = `
+      <div>
+        <div style="color: ${fish.rarity.color}; font-weight: bold; margin-bottom: 0.3em;">
+          ${fish.fishName}
+        </div>
+        <div style="color: #aaa; font-size: 0.9em;">Count: ${fish.count}</div>
+      </div>
+      <div style="display: flex; gap: 0.5em;">
+        <button class="pixel-btn sell-rupee-btn" data-key="${key}"
+          style="padding: 0.5em 1em; background: #4a90a4; display: flex; align-items: center; gap: 0.3em;">
+          <img src="assets/coin.png" style="width: 16px; height: 16px; image-rendering: pixelated;">
+          ${fish.rarity.baseCurrency}
+        </button>
+        <button class="pixel-btn sell-mon-btn" data-key="${key}"
+          style="padding: 0.5em 1em; background: #8e44ad; display: flex; align-items: center; gap: 0.3em;">
+          <img src="assets/gem.png" style="width: 16px; height: 16px; image-rendering: pixelated;">
+          ${fish.rarity.monValue}
+        </button>
+      </div>
+    `;
+    
+    listDiv.appendChild(div);
+  });
+  
+  container.appendChild(listDiv);
+  
+  document.getElementById('sell-all-rupees-btn')?.addEventListener('click', () => sellAll('rupees'));
+  document.getElementById('sell-all-mon-btn')?.addEventListener('click', () => sellAll('mon'));
   
   document.querySelectorAll('.sell-rupee-btn').forEach(btn => {
     btn.addEventListener('click', () => sellFish(btn.dataset.key, false));
@@ -969,515 +1515,256 @@ function updateShopDisplay() {
   });
 }
 
-function sellFish(fishKey, forMon = false) {
-  const fish = inventory[fishKey];
+function sellFish(key, forMon, sellAll = false) {
+  const fish = gameState.inventory[key];
   if (!fish || fish.count === 0) return;
-  
-  if (fish.rarity.name === 'Triforce') {
-    alert("Can't sell Triforce shards!");
-    return;
-  }
-  
+
+  const amountToSell = sellAll ? fish.count : 1;
+
   if (forMon) {
-    gemCount += fish.rarity.monValue;
-    gemCountSpan.textContent = formatNumber(gemCount);
+    const value = fish.rarity.monValue * amountToSell;
+    if (value > 0) gameState.mon += value;
   } else {
-    currencyCount += fish.rarity.baseCurrency;
-    coinCountSpan.textContent = formatNumber(currencyCount);
+    const value = fish.rarity.baseCurrency * amountToSell;
+    if (value > 0) gameState.rupees += value;
   }
-  
-  inventory[fishKey].count--;
-  
-  if (inventory[fishKey].count === 0) {
-    delete inventory[fishKey];
+
+  fish.count -= amountToSell;
+  if (fish.count <= 0) {
+    delete gameState.inventory[key];
   }
-  
-  updateShopDisplay();
-  updateInventoryDisplay();
+
+  updateAllUI();
   saveState();
 }
 
-// XP bar state
-let xp = 0;
-let level = 1;
-const maxLevel = 100;
+function sellAll(currency) {
+  let total = 0;
 
-loadState();
-
-function updateXPBar() {
-  const progress = document.getElementById('xp-progress');
-  const levelSpan = document.getElementById('xp-level');
-  const progressText = document.getElementById('xp-progress-text');
-  if (!progress || !levelSpan || !progressText) return;
-  level = Math.min(level, maxLevel);
-  let percent = Math.max(0, Math.min(100, xp));
-  progress.style.width = percent + '%';
-  levelSpan.textContent = level;
-  progressText.textContent = xp + '/100';
-}
-
-updateXPBar();
-
-function formatNumber(n) {
-  if (n < 10000) return n.toLocaleString();
-  if (n < 1000000) return Math.floor(n / 1000) + 'k';
-  if (n < 1000000000) return Math.floor(n / 1000000) + 'M';
-  return n.toLocaleString();
-}
-
-coinCountSpan.textContent = formatNumber(currencyCount);
-gemCountSpan.textContent = formatNumber(gemCount);
-updateInventoryDisplay();
-
-function updateAutoFishCostColor() {
-  const costSpan = document.getElementById('auto-fish-cost');
-  if (!costSpan) return;
-  if (autoFishUnlocked) {
-    costSpan.classList.remove('cost-red');
-    costSpan.classList.add('cost-white');
-    costSpan.textContent = '-';
-  } else if (currencyCount >= 50000) {
-    costSpan.classList.remove('cost-red');
-    costSpan.classList.add('cost-white');
-  } else {
-    costSpan.classList.add('cost-red');
-    costSpan.classList.remove('cost-white');
-  }
-}
-window.updateAutoFishCostColor = updateAutoFishCostColor;
-updateAutoFishCostColor();
-
-const autoFishUpgradeBtn = document.getElementById('auto-fish-upgrade-btn');
-function updateUpgradeMapButton() {
-  if (!autoFishUpgradeBtn) return;
-  if (autoFishUnlocked) {
-    autoFishUpgradeBtn.textContent = 'Unlocked';
-    autoFishUpgradeBtn.classList.remove('green');
-    autoFishUpgradeBtn.disabled = true;
-  } else if (currencyCount >= 50000) {
-    autoFishUpgradeBtn.textContent = 'Buy';
-    autoFishUpgradeBtn.classList.add('green');
-    autoFishUpgradeBtn.disabled = false;
-  } else {
-    autoFishUpgradeBtn.textContent = 'Locked';
-    autoFishUpgradeBtn.classList.remove('green');
-    autoFishUpgradeBtn.disabled = true;
-  }
-}
-
-if (autoFishUpgradeBtn) {
-  autoFishUpgradeBtn.addEventListener('click', function() {
-    if (!autoFishUnlocked && currencyCount >= 50000) {
-      currencyCount -= 50000;
-      autoFishUnlocked = true;
-      saveState();
-      updateUpgradeMapButton();
-      coinCountSpan.textContent = formatNumber(currencyCount);
-      updateAutoFishCostColor();
-      updateAutoFishUIButton();
+  Object.entries(gameState.inventory).forEach(([key, fish]) => {
+    if (fish.rarity && fish.rarity.name !== 'Triforce' && fish.count > 0) {
+      if (currency === 'rupees') {
+        total += (fish.rarity.baseCurrency || 0) * fish.count;
+      } else {
+        total += (fish.rarity.monValue || 0) * fish.count;
+      }
+      delete gameState.inventory[key];
     }
   });
+
+  if (currency === 'rupees') {
+    gameState.rupees += total;
+    showNotification(`Sold all fish for ${formatNumber(total)} Rupees!`);
+  } else {
+    gameState.mon += total;
+    showNotification(`Sold all fish for ${formatNumber(total)} Mon!`);
+  }
+
+  updateAllUI();
+  saveState();
 }
 
-updateUpgradeMapButton();
+// TAB SWITCHING
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
 
-function updateCoinAndAutoFishTile() {
-  coinCountSpan.textContent = formatNumber(currencyCount);
-  updateUpgradeMapButton();
-}
-
-import { setupSettingsPanel } from './settings.js';
-setupSettingsPanel({
-  getState: () => ({ 
-    currencyCount, gemCount, fishCount, inventory, xp, level, 
-    autoFishUnlocked, reelSpeedLevel, luckLevel, lifetimeFishCount,
-    timesFished, collectedShards
-  }),
-  setState: (updates) => {
-    if ('currencyCount' in updates) currencyCount = updates.currencyCount;
-    if ('gemCount' in updates) gemCount = updates.gemCount;
-    if ('fishCount' in updates) fishCount = updates.fishCount;
-    if ('inventory' in updates) Object.assign(inventory, updates.inventory);
-    if ('xp' in updates) xp = updates.xp;
-    if ('level' in updates) level = updates.level;
-    if ('autoFishUnlocked' in updates) autoFishUnlocked = updates.autoFishUnlocked;
-    if ('lifetimeFishCount' in updates) lifetimeFishCount = updates.lifetimeFishCount;
-    if ('timesFished' in updates) timesFished = updates.timesFished;
-    if ('reelSpeedLevel' in updates) reelSpeedLevel = updates.reelSpeedLevel;
-    if ('luckLevel' in updates) luckLevel = updates.luckLevel;
-    if ('collectedShards' in updates) collectedShards = updates.collectedShards;
-  },
-  saveState,
-  updateUI: () => {
-    if (typeof coinCountSpan !== 'undefined') coinCountSpan.textContent = formatNumber(currencyCount);
-    if (typeof gemCountSpan !== 'undefined') gemCountSpan.textContent = formatNumber(gemCount);
-    if (typeof lifetimeFishCountSpan !== 'undefined') lifetimeFishCountSpan.textContent = lifetimeFishCount;
-    updateUpgradeMapButton();
-    updateLuckButtons();
-    updateReelSpeedButtons();
-    updateAutoFishCostColor();
-    updateTriforceUI();
-    updateLuckDisplay();
-  },
-  updateAutoFishUIButton: updateAutoFishUIButton,
-  updateAutoFishCostColor: updateAutoFishCostColor,
-  updateReelSpeedButtons: updateReelSpeedButtons,
-  updateLuckButtons: updateLuckButtons
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    tabContents.forEach(tc => tc.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    
+    if (btn.dataset.tab !== 'fishing') {
+      stopAutoFish();
+    }
+    
+    if (elements.fishBtn) {
+      elements.fishBtn.style.display = btn.dataset.tab === 'fishing' ? '' : 'none';
+    }
+    if (elements.autoFishBtn) {
+      elements.autoFishBtn.style.display = btn.dataset.tab === 'fishing' && gameState.autoFishUnlocked ? '' : 'none';
+    }
+  });
 });
 
-let fishBtn = document.getElementById('fish-btn');
-let fishBtnContainer = document.getElementById('fish-btn-container');
-if (!fishBtnContainer) {
-  fishBtnContainer = document.createElement('div');
-  fishBtnContainer.id = 'fish-btn-container';
-  fishBtnContainer.style.display = 'flex';
-  fishBtnContainer.style.gap = '32px';
-  fishBtnContainer.style.alignItems = 'center';
-  fishBtnContainer.style.justifyContent = 'center';
-  fishBtnContainer.style.position = 'fixed';
-  fishBtnContainer.style.left = '50%';
-  fishBtnContainer.style.bottom = '32px';
-  fishBtnContainer.style.transform = 'translateX(-50%)';
-  fishBtnContainer.style.zIndex = '1000';
-  document.body.appendChild(fishBtnContainer);
-}
-if (!fishBtn) {
-  fishBtn = document.createElement('button');
-  fishBtn.id = 'fish-btn';
-  fishBtn.className = 'pixel-btn';
-  fishBtn.style.fontSize = '1.2em';
-  fishBtn.style.padding = '1em 2.5em';
-  fishBtn.textContent = 'Fish!';
-  fishBtnContainer.appendChild(fishBtn);
-}
-
-let autoFishBtnEl = null;
-let autoFishActive = false;
-let autoFishInterval = null;
-
-function updateAutoFishUIButton() {
-  if (!fishBtn) return;
-  const fishingTabBtn = document.querySelector('.tab-btn.active');
-  const onFishingTab = fishingTabBtn && fishingTabBtn.dataset.tab === 'fishing';
+// POTIONS
+window.buyPotion = function(type) {
+  const cost = type === 'luck' ? 3000 : 5000;
   
-  if (!autoFishUnlocked || !onFishingTab) {
-    if (autoFishBtnEl) {
-      autoFishBtnEl.style.display = 'none';
-    }
+  if (gameState.rupees < cost) {
+    showNotification('Not enough rupees!');
     return;
   }
   
-  if (!autoFishBtnEl) {
-    autoFishBtnEl = document.createElement('button');
-    autoFishBtnEl.id = 'auto-fish-btn';
-    autoFishBtnEl.className = 'pixel-btn';
-    autoFishBtnEl.style.fontSize = '1.2em';
-    autoFishBtnEl.style.padding = '1em 2.5em';
-    autoFishBtnEl.textContent = 'Auto Fish';
-    fishBtnContainer.appendChild(autoFishBtnEl);
-    
-    autoFishBtnEl.addEventListener('click', () => {
-      if (autoFishActive) {
-        clearInterval(autoFishInterval);
-        autoFishActive = false;
-        autoFishBtnEl.textContent = 'Auto Fish';
-      } else {
-        function autoFishLoop() {
-          if (fishBtn && !fishBtn.disabled) {
-            catchFish();
-          }
-        }
-        autoFishActive = true;
-        autoFishBtnEl.textContent = 'Stop Auto';
-        autoFishInterval = setInterval(autoFishLoop, getFishingTime() + 1200);
-      }
-    });
+  // Prevent buying if already active
+  if (Date.now() < gameState.activePotions[type]) {
+    showNotification('Potion already active!');
+    return;
   }
-  autoFishBtnEl.style.display = '';
-}
-
-updateAutoFishUIButton();
-
-if (fishBtn) {
-  fishBtn.addEventListener('click', catchFish);
-}
-
-function updateReelSpeedButtons() {
-  const btn = document.getElementById('reel-speed-btn');
-  const costSpan = document.getElementById('reel-speed-cost');
-  const nameTd = document.getElementById('reel-speed-name');
-  if (!btn || !costSpan || !nameTd) return;
-
-  if (reelSpeedLevel >= 3) {
-    nameTd.textContent = 'Reel Speed III';
-    btn.textContent = 'Max Level';
-    btn.disabled = true;
-    costSpan.classList.remove('cost-red');
-    costSpan.classList.add('cost-white');
-    costSpan.textContent = '-';
-  } else {
-    const levels = ['I', 'II', 'III'];
-    nameTd.textContent = `Reel Speed ${levels[reelSpeedLevel]}`;
-    const currentCost = reelSpeedCosts[reelSpeedLevel];
-    costSpan.textContent = formatNumber(currentCost);
-    
-    if (currencyCount >= currentCost) {
-      btn.textContent = 'Buy';
-      btn.classList.add('green');
-      btn.disabled = false;
-      costSpan.classList.remove('cost-red');
-      costSpan.classList.add('cost-white');
-    } else {
-      btn.textContent = 'Locked';
-      btn.classList.remove('green');
-      btn.disabled = true;
-      costSpan.classList.add('cost-red');
-      costSpan.classList.remove('cost-white');
-    }
-  }
-  updateReelSpeedCounter();
-}
-
-const reelSpeedBtn = document.getElementById('reel-speed-btn');
-if (reelSpeedBtn) {
-  reelSpeedBtn.addEventListener('click', () => {
-    if (reelSpeedLevel < 3 && currencyCount >= reelSpeedCosts[reelSpeedLevel]) {
-      currencyCount -= reelSpeedCosts[reelSpeedLevel];
-      reelSpeedLevel++;
-      saveState();
-      updateReelSpeedButtons();
-      coinCountSpan.textContent = formatNumber(currencyCount);
-      updateReelSpeedCounter();
-    }
-  });
-}
-
-function updateLuckButtons() {
-  const btn = document.getElementById('luck-btn');
-  const costSpan = document.getElementById('luck-cost');
-  const nameTd = document.getElementById('luck-name');
-  if (!btn || !costSpan || !nameTd) return;
-
-  if (luckLevel >= 3) {
-    nameTd.textContent = 'Luck III';
-    btn.textContent = 'Max Level';
-    btn.disabled = true;
-    costSpan.classList.remove('cost-red');
-    costSpan.classList.add('cost-white');
-    costSpan.textContent = '-';
-  } else {
-    const levels = ['I', 'II', 'III'];
-    nameTd.textContent = `Luck ${levels[luckLevel]}`;
-    const currentCost = luckCosts[luckLevel];
-    costSpan.textContent = formatNumber(currentCost);
-    
-    if (currencyCount >= currentCost) {
-      btn.textContent = 'Buy';
-      btn.classList.add('green');
-      btn.disabled = false;
-      costSpan.classList.remove('cost-red');
-      costSpan.classList.add('cost-white');
-    } else {
-      btn.textContent = 'Locked';
-      btn.classList.remove('green');
-      btn.disabled = true;
-      costSpan.classList.add('cost-red');
-      costSpan.classList.remove('cost-white');
-    }
-  }
-  updateLuckDisplay();
-}
-
-const luckBtn = document.getElementById('luck-btn');
-if (luckBtn) {
-  luckBtn.addEventListener('click', () => {
-    if (luckLevel < 3 && currencyCount >= luckCosts[luckLevel]) {
-      currencyCount -= luckCosts[luckLevel];
-      luckLevel++;
-      saveState();
-      updateLuckButtons();
-      coinCountSpan.textContent = formatNumber(currencyCount);
-      updateLuckDisplay();
-    }
-  });
-}
-
-function updateShinyPullCounter() {
-  if (shinyPullCountSpan) {
-    shinyPullCountSpan.textContent = `${pullsUntilShiny}`;
-  }
-}
-
-function updateReelSpeedCounter() {
-  const reelSpeedLevelSpan = document.getElementById('reel-speed-level');
-  if (reelSpeedLevelSpan) {
-    const totalSpeed = 100 + getReelSpeedBonus();
-    reelSpeedLevelSpan.textContent = totalSpeed;
-  }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  updateReelSpeedCounter();
-  updateLuckDisplay();
-  setupChests();
-  setupShop();
-  updateStatsDisplay();
-  updateTriforceUI();
   
-  // Remove "Fish caught: 1" display
-  const fishCaughtDiv = document.getElementById('fish-caught');
-  if (fishCaughtDiv) {
-    fishCaughtDiv.style.display = 'none';
-  }
-});
-
-function addRecentFish(fishName, count) {
-  if (recentFish.length > 0 && recentFish[0].name === fishName) {
-    recentFish[0].count += count;
-  } else {
-    recentFish.unshift({ name: fishName, count });
-  }
-  if (recentFish.length > 10) recentFish = recentFish.slice(0, 10);
-  updateRecentFishDisplay();
+  gameState.rupees -= cost;
+  gameState.totalSpent += cost;
+  gameState.activePotions[type] = Date.now() + 5 * 60 * 1000;
+  
+  showNotification(`${type === 'luck' ? 'Luck' : 'Reel Speed'} Potion activated!`);
+  updateAllUI();
+  updatePotionsTab();
+  saveState();
+  checkAchievements();
 }
 
-function updateRecentFishDisplay() {
-  const container = document.getElementById('recent-fish-container');
+function updatePotionsTab() {
+  const container = document.getElementById('potions');
   if (!container) return;
-  container.innerHTML = '';
-  recentFish.forEach((entry, idx) => {
+  
+  const potions = [
+    { type: 'luck', name: 'Luck Potion', cost: 3000, desc: '+10% Luck for 5 minutes' },
+    { type: 'reel', name: 'Reel Speed Potion', cost: 5000, desc: '+20 Reel Speed for 5 minutes' }
+  ];
+  
+  container.innerHTML = '<h2>Potions</h2>';
+  
+  potions.forEach(potion => {
+    const canAfford = gameState.rupees >= potion.cost;
+    const isActive = Date.now() < gameState.activePotions[potion.type];
+    
     const div = document.createElement('div');
-    const opacity = 1 - idx * 0.08;
-    const fontSize = 1 - idx * 0.05;
-    div.style.opacity = opacity;
-    div.style.fontSize = fontSize + 'em';
-    div.style.transition = 'all 0.5s cubic-bezier(.4,2,.6,1)';
-    div.className = 'recent-fish-entry';
+    div.style.cssText = `
+      background: rgba(0,0,0,0.3);
+      padding: 1.5em;
+      border-radius: 8px;
+      border: 2px solid ${isActive ? '#23d160' : canAfford ? '#8e44ad' : '#666'};
+      margin-bottom: 1em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1em;
+      flex-wrap: wrap;
+    `;
     
-    let fishName = entry.name;
-    let isShiny = false;
-    let baseName = fishName;
-    if (fishName.endsWith(' (shiny)')) {
-      isShiny = true;
-      baseName = fishName.replace(' (shiny)', '');
+    let timeRemaining = '';
+    if (isActive) {
+      const sec = Math.ceil((gameState.activePotions[potion.type] - Date.now()) / 1000);
+      timeRemaining = `<div style="color: #23d160; font-size: 0.85em; margin-top: 0.3em;">Active: ${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}</div>`;
     }
     
-    let rarityColor = '#fffbe7';
-    for (const rarity of fishRarities) {
-      if (fishList[rarity.name]) {
-        const found = fishList[rarity.name].find(f => {
-          if (typeof f === 'string') return f === baseName;
-          if (typeof f === 'object') return f.name === baseName;
-          return false;
-        });
-        if (found) {
-          rarityColor = rarity.color;
-          break;
-        }
-      }
-    }
+    div.innerHTML = `
+      <div>
+        <div style="font-size: 1.2em; margin-bottom: 0.3em;">${potion.name}</div>
+        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 0.5em;">${potion.desc}</div>
+        <div style="color: #ffd700; font-size: 0.9em; display: flex; align-items: center; gap: 0.3em;">
+          Cost: <img src="assets/coin.png" style="width: 16px; height: 16px; image-rendering: pixelated;"> ${formatNumber(potion.cost)}
+        </div>
+        ${timeRemaining}
+      </div>
+      <button class="pixel-btn" ${!canAfford || isActive ? 'disabled' : ''} 
+        onclick="buyPotion('${potion.type}')"
+        style="padding: 0.8em 1.5em; background: ${isActive ? '#666' : canAfford ? '#8e44ad' : '#666'};">
+        ${isActive ? 'Active' : canAfford ? 'Buy' : 'Locked'}
+      </button>
+    `;
     
-    let nameHtml = `<span style="color:${rarityColor};font-weight:bold;">${baseName}</span>`;
-    if (isShiny) nameHtml += ' <span class="shiny-glow">(shiny)</span>';
-    div.innerHTML = `${nameHtml} <span style="color:#ffd700;">x${entry.count}</span>`;
     container.appendChild(div);
   });
 }
 
-function animateRecentFish() {
-  const container = document.getElementById('recent-fish-container');
-  if (!container) return;
-  const first = container.firstChild;
-  if (first) {
-    first.style.transform = 'translateX(-30px) scale(1.15)';
-    first.style.opacity = '0';
-    setTimeout(() => {
-      first.style.transition = 'all 0.5s cubic-bezier(.4,2,.6,1)';
-      first.style.transform = 'translateX(0) scale(1)';
-      first.style.opacity = '1';
-    }, 10);
+setInterval(() => {
+  updatePotionsTab();
+}, 1000);
+
+// INITIALIZE
+document.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  
+  let fishBtnContainer = document.getElementById('fish-btn-container');
+  if (!fishBtnContainer) {
+    fishBtnContainer = document.createElement('div');
+    fishBtnContainer.id = 'fish-btn-container';
+    fishBtnContainer.style.cssText = `
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 1.5em;
+      z-index: 1000;
+    `;
+    document.body.appendChild(fishBtnContainer);
   }
-}
-
-window.addEventListener('DOMContentLoaded', updateRecentFishDisplay);
-
-const bgMusic = document.getElementById('bg-music');
-const musicVolumeSlider = document.getElementById('music-volume');
-
-let savedVolume = parseFloat(localStorage.getItem('fishyMusicVolume'));
-if (isNaN(savedVolume)) savedVolume = 0.25;
-if (bgMusic) bgMusic.volume = savedVolume;
-if (musicVolumeSlider) musicVolumeSlider.value = savedVolume;
-
-function enableMusicPlayback() {
-  if (bgMusic && bgMusic.paused) {
-    bgMusic.play().catch(()=>{});
+  
+  if (!elements.fishBtn) {
+    elements.fishBtn = document.createElement('button');
+    elements.fishBtn.id = 'fish-btn';
+    elements.fishBtn.className = 'pixel-btn';
+    elements.fishBtn.style.cssText = 'font-size: 1.5em; padding: 1.2em 3em; background: #222736; border: 4px solid #181c24;';
+    elements.fishBtn.textContent = 'Fish!';
+    elements.fishBtn.addEventListener('click', startFishing);
+    fishBtnContainer.appendChild(elements.fishBtn);
   }
-  window.removeEventListener('pointerdown', enableMusicPlayback);
-  window.removeEventListener('keydown', enableMusicPlayback);
-}
-window.addEventListener('pointerdown', enableMusicPlayback);
-window.addEventListener('keydown', enableMusicPlayback);
-
-if (musicVolumeSlider) {
-  musicVolumeSlider.addEventListener('input', e => {
-    const v = parseFloat(e.target.value);
-    if (bgMusic) bgMusic.volume = v;
-    localStorage.setItem('fishyMusicVolume', v);
-  });
-}
-
-const clickSound = document.getElementById('click-sound');
-const closeSound = document.getElementById('close-sound');
-const uiVolumeSlider = document.getElementById('ui-volume');
-
-let savedUIVolume = parseFloat(localStorage.getItem('fishyUIVolume'));
-if (isNaN(savedUIVolume)) savedUIVolume = 0.5;
-if (clickSound) clickSound.volume = savedUIVolume;
-if (closeSound) closeSound.volume = savedUIVolume;
-if (uiVolumeSlider) uiVolumeSlider.value = savedUIVolume;
-
-if (uiVolumeSlider) {
-  uiVolumeSlider.addEventListener('input', e => {
-    const v = parseFloat(e.target.value);
-    if (clickSound) clickSound.volume = v;
-    if (closeSound) closeSound.volume = v;
-    localStorage.setItem('fishyUIVolume', v);
-  });
-}
-
-document.querySelectorAll('button:not(#close-settings-btn)').forEach(button => {
-  button.addEventListener('click', () => {
-    if (clickSound) {
-      clickSound.currentTime = 0;
-      clickSound.play().catch(() => {});
-    }
-  });
+  
+  if (gameState.autoFishUnlocked && !elements.autoFishBtn) {
+    elements.autoFishBtn = document.createElement('button');
+    elements.autoFishBtn.id = 'auto-fish-btn';
+    elements.autoFishBtn.className = 'pixel-btn';
+    elements.autoFishBtn.style.cssText = 'font-size: 1.5em; padding: 1.2em 3em; background: #8e44ad;';
+    elements.autoFishBtn.textContent = 'Auto Fish';
+    elements.autoFishBtn.addEventListener('click', toggleAutoFish);
+    fishBtnContainer.appendChild(elements.autoFishBtn);
+  }
+  
+  const fishCaughtDiv = document.getElementById('fish-caught');
+  if (fishCaughtDiv) fishCaughtDiv.style.display = 'none';
+  
+  setupSettings();
+  updateAllUI();
+  updatePotionsTab();
+  checkAchievements();
 });
 
-const closeSettingsBtn = document.getElementById('close-settings-btn');
-if (closeSettingsBtn) {
-  closeSettingsBtn.addEventListener('click', () => {
-    if (closeSound) {
-      closeSound.currentTime = 0;
-      closeSound.play().catch(() => {});
+function setupSettings() {
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsPanel = document.getElementById('settings-panel');
+  const closeSettingsBtn = document.getElementById('close-settings-btn');
+  
+  if (settingsBtn && settingsPanel) {
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.style.display = 'block';
+    });
+  }
+  
+  if (closeSettingsBtn && settingsPanel) {
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsPanel.style.display = 'none';
+    });
+  }
+  
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = 'Complete Reset';
+  resetBtn.className = 'pixel-btn';
+  resetBtn.style.cssText = 'background: #e74c3c; width: 100%; margin-top: 1em; padding: 0.8em;';
+  resetBtn.addEventListener('click', () => {
+    if (confirm('Are you sure? This will delete ALL progress!')) {
+      localStorage.removeItem('zeldaFishingV2');
+      location.reload();
     }
   });
+  
+  if (settingsPanel) {
+    settingsPanel.appendChild(resetBtn);
+  }
 }
 
-function wobbleElement(element) {
-  if (!element) return;
-  element.style.animation = 'none';
-  void element.offsetWidth;
-  element.style.animation = 'wobble 0.5s cubic-bezier(.36,.07,.19,.97) both';
-}
-
-document.querySelectorAll('.rarity-filter, #shiny-filter').forEach(checkbox => {
-  checkbox.addEventListener('change', function() {
-    const tickSound = document.getElementById('tick-sound');
-    if (tickSound) {
-      tickSound.currentTime = 0;
-      tickSound.play().catch(() => {});
+// === Keyboard Shortcut ===
+// Allow pressing Spacebar to trigger the Fish! button
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault(); // Prevent page scrolling
+    const fishBtn = document.getElementById('fish-btn');
+    const activeTab = document.querySelector('.tab-content.active');
+    // Only allow fishing if on fishing tab and button is enabled
+    if (fishBtn && !fishBtn.disabled && activeTab && activeTab.id === 'fishing') {
+      fishBtn.click();
     }
-  });
+  }
 });
