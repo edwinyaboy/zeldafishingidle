@@ -1,3 +1,6 @@
+/* ===========================
+   BASE STYLES
+=========================== */
 body {
   margin: 0;
   font-family: 'Press Start 2P', 'Segoe UI', Arial, sans-serif;
@@ -18,6 +21,7 @@ body::before {
   filter: blur(4px) brightness(0.9);
   opacity: 0.85;
 }
+
 body > * {
   position: relative;
   z-index: 1;
@@ -55,13 +59,16 @@ body > * {
   box-shadow: 2px 2px 0 #00bcd4;
 }
 
-
+/* ===========================
+   NAVBAR & TABS
+=========================== */
 .navbar {
   display: flex;
+  flex-wrap: wrap;
   background: #222736;
-  padding: 0.5em 0;
+  padding: 0.5em;
   justify-content: center;
-  gap: 1em;
+  gap: 0.5em;
   box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
@@ -75,8 +82,8 @@ body > * {
   border-bottom: 3px solid transparent;
   transition: border 0.2s, background 0.2s;
   border-radius: 6px 6px 0 0;
+  white-space: nowrap;
 }
-
 
 .tab-btn.active {
   border-bottom: 3px solid #00bcd4;
@@ -84,9 +91,12 @@ body > * {
   color: #00bcd4;
 }
 
+/* ===========================
+   MAIN CONTAINER
+=========================== */
 main {
   max-width: 60vw;
-  width: auto;
+  width: 90%;
   margin: 2em auto;
   background: linear-gradient(135deg, rgba(35, 40, 58, 0.3), rgba(35, 40, 58, 0.1));
   backdrop-filter: blur(10px);
@@ -99,6 +109,9 @@ main {
   z-index: 1;
 }
 
+/* ===========================
+   TAB CONTENT
+=========================== */
 .tab-content {
   display: none;
 }
@@ -106,28 +119,6 @@ main {
 .tab-content.active {
   display: block;
 }
-
-#character-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1em;
-}
-
-/* Fixed width for coin and gem counters */
-#coin-count, #gem-count, #lifetime-fish-count {
-  display: inline-block;
-  min-width: 70px;
-  max-width: 110px;
-  width: 90px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
 
 .tab-content h2 {
   color: #00bcd4;
@@ -141,7 +132,10 @@ main {
   color: #b5c2e0;
 }
 
-.inventory-table {
+/* ===========================
+   TABLES (Inventory/Upgrade/Shop)
+=========================== */
+.inventory-table, .upgrade-table {
   width: 100%;
   margin: 1.5em 0 0 0;
   border-collapse: collapse;
@@ -151,21 +145,14 @@ main {
   overflow: hidden;
 }
 
-.inventory-table table {
+.inventory-table table, .upgrade-table table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-@media (max-width: 1000px) {
-  .inventory-table {
-    width: 99vw;
-    margin-left: 0;
-    margin-right: 0;
-  }
-}
-
-.inventory-table th, .inventory-table td {
+.inventory-table th, .inventory-table td,
+.upgrade-table th, .upgrade-table td {
   border: 2px solid #3a3f54;
   padding: 0.85em 1.1em;
   text-align: center;
@@ -176,38 +163,29 @@ main {
   overflow-wrap: break-word;
   overflow: hidden;
 }
+
 .inventory-table th:nth-child(1), .inventory-table td:nth-child(1) {
   min-width: 140px;
   max-width: 55%;
-  width: auto;
   text-align: left;
 }
+
 .inventory-table th:nth-child(2), .inventory-table td:nth-child(2) {
   min-width: 100px;
   max-width: 28%;
-  width: auto;
   text-align: center;
 }
+
 .inventory-table th:nth-child(3), .inventory-table td:nth-child(3) {
   min-width: 70px;
   max-width: 14%;
-  width: auto;
   text-align: center;
 }
+
 .inventory-table th:nth-child(4), .inventory-table td:nth-child(4) {
   min-width: 110px;
   max-width: 20%;
-  width: auto;
   text-align: center;
-}
-@media (max-width: 700px) {
-  .inventory-table {
-    font-size: 0.9em;
-    min-width: 320px;
-  }
-  .inventory-table th, .inventory-table td {
-    padding: 0.5em 0.4em;
-  }
 }
 
 .inventory-table th {
@@ -234,103 +212,57 @@ main {
   background: #2a2f44;
   color: #b5c2e0;
 }
+
 .inventory-table tr:nth-child(even) td {
   background: #23283a;
 }
+
 .inventory-table td:first-child {
   white-space: nowrap;
 }
+
 .inventory-table td:last-child {
   font-weight: bold;
   letter-spacing: 1px;
 }
 
-/* Ensure shiny-glow and shiny-craft-btn remain consistent */
-.shiny-glow {
-  font-weight: bold;
-  background: linear-gradient(90deg, #ff5e62, #ff9966, #f9d423, #23d160, #38a1db, #9b59b6, #ff5e62 60%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-fill-color: transparent;
-  animation: rainbow-swipe 2s linear infinite;
-}
-
-.shiny-craft-btn {
-  font-family: 'Press Start 2P', Arial, sans-serif;
-  font-size: 0.8em;
-  padding: 0.3em 1em;
-  border: 2px solid #ffd700;
-  border-radius: 4px;
-  background: #23283a;
-  color: #ffd700;
-  box-shadow: 2px 2px 0 #181c24;
-  margin: 0 auto;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, opacity 0.2s;
-  display: inline-block;
-}
-.shiny-craft-btn:disabled {
-  border-color: #666;
-  color: #666;
-  background: #23283a;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-
-.upgrade-tree {
+/* ===========================
+   CHARACTER AREA
+=========================== */
+#character-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 2em;
+  gap: 1em;
 }
 
-.upgrade-table {
-  width: 380px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: #23283a;
-  font-family: 'Press Start 2P', Arial, sans-serif;
-  font-size: 1em;
-  color: #e0eaff;
-  margin: 0 auto 2em auto;
-  box-shadow: 0 2px 12px #181c24;
-  border-radius: 12px;
-  overflow: hidden;
+.character-img {
+  width: 120px;
+  height: auto;
+  margin-bottom: 1em;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 4px solid #181c24;
+  box-shadow: 0 0 0 4px #23283a;
+  border-radius: 0;
 }
-.upgrade-table th, .upgrade-table td {
-  border: 2px solid #3a3f54;
-  padding: 1em 1.2em;
+
+/* ===========================
+   COUNTERS
+=========================== */
+#coin-count, #gem-count, #lifetime-fish-count {
+  display: inline-block;
+  min-width: 50px;
+  max-width: 90px;
+  width: auto;
   text-align: center;
-}
-.upgrade-table th {
-  background: #23283a;
-  color: #fff;
-  font-size: 1.05em;
-  letter-spacing: 1px;
-}
-.upgrade-table td {
-  background: #2a2f44;
-  color: #b5c2e0;
-}
-.upgrade-table td:first-child {
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: middle;
 }
-.upgrade-table tr:nth-child(even) td {
-  background: #23283a;
-}
-.upgrade-table td:last-child {
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-.upgrade-table .cost-red {
-  color: #e74c3c !important;
-}
-.upgrade-table .cost-white {
-  color: #fff !important;
-}
+
 .counter-icon {
   height: 3em;
   vertical-align: middle;
@@ -338,6 +270,7 @@ main {
   image-rendering: pixelated;
   filter: drop-shadow(0 1px 2px #0008);
 }
+
 #xp-bar .counter-icon {
   height: 2em;
   margin-right: 0.15em;
@@ -357,15 +290,19 @@ main {
   white-space: nowrap;
   z-index: 20;
 }
+
 #xp-progress-container {
   position: relative;
   z-index: 10;
 }
+
 #xp-progress-container:hover span#xp-progress-text {
   opacity: 1;
 }
 
-
+/* ===========================
+   HEX TILES & UPGRADES
+=========================== */
 .hex-tile {
   width: 100%;
   height: 100%;
@@ -389,6 +326,7 @@ main {
   background-clip: padding-box;
   z-index: 1;
 }
+
 #auto-fish-tile {
   background: none;
   border: none;
@@ -397,12 +335,13 @@ main {
 }
 
 .upgrade-tree {
-  background: #23283a;
-  padding: 32px 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 2em;
+  background: #23283a;
+  padding: 32px 0;
+  overflow: hidden;
 }
 
 .hex-tile.locked {
@@ -411,207 +350,34 @@ main {
   filter: grayscale(0.7);
   position: relative;
 }
+
 .hex-tile.locked .lock-icon {
   position: absolute;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
-  font-size: 2.2em;
-  color: #e7e7e7;
-  text-shadow: 0 2px 8px #000a;
-  filter: none;
-  pointer-events: none;
-}
-.hex-tile.locked .upgrade-title,
-.hex-tile.locked .upgrade-cost {
-  margin-top: 20px;
-}
-.hex-tile .upgrade-title {
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 2px 2px 8px #000, 0 0 8px #fff7;
-  font-size: 1em;
-  letter-spacing: 0.5px;
-  margin-bottom: 3px;
-  margin-top: 0;
-  text-align: center;
-}
-.hex-tile.locked .upgrade-title {
-  color: #bbb !important;
-  text-shadow: none !important;
-  filter: grayscale(1);
-}
-.upgrade-cost {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95em;
-  margin-bottom: 8px;
-  font-weight: bold;
-  text-shadow: 1px 1px 6px #000, 0 0 8px #fff7;
-}
-.hex-tile.locked .upgrade-cost {
-  color: #bbb !important;
-  text-shadow: none !important;
-  filter: grayscale(1);
-}
-.upgrade-cost .cost-coin {
-  color: #ffd700;
-  font-size: 1.1em;
-  margin-right: 3px;
-  margin-left: 2px;
-}
-.hex-tile.locked .cost-coin {
-  color: #bbb !important;
-}
-.upgrade-purchase-btn {
-  margin-top: 2px;
-}
-.upgrade-purchase-btn.green {
-  color: #23d160;
-  border-color: #23d160;
-  background: #23283a;
-}
-.upgrade-purchase-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-  font-family: 'Press Start 2P', Arial, sans-serif;
-  font-size: 0.82em;
-  padding: 0.4em 1em;
-  border: 2px solid #ffd700;
-  border-radius: 4px;
-  background: #23283a;
-  color: #fff;
-  box-shadow: 2px 2px 0 #181c24;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s;
-  width: 90px;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-}
-.upgrade-purchase-btn.red {
-  color: #fff;
-  background: #7d5050;
-  border-color: #b12b2b;
-}
-.upgrade-purchase-btn.white {
-  color: #fff;
-  background: #23283a;
-  border-color: #ffd700;
-}
-.upgrade-purchase-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.hex-tile.hex-tile-glow {
-  border: 4px solid #fff;
-  box-shadow: 0 0 24px 6px #6fc3ff, 0 0 0 6px #23283a, 0 0 32px 8px #fff7;
-}
-.hex-tile .upgrade-icon {
-  font-size: 2.4em;
-  margin-top: 10px;
-  margin-bottom: 6px;
-  filter: drop-shadow(0 0 8px #fff7);
-  pointer-events: none;
-}
-.hex-tile .upgrade-title {
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 2px 2px 8px #000, 0 0 8px #fff7;
-  margin-bottom: 2px;
-  font-size: 0.95em;
-  letter-spacing: 0.5px;
-}
-.upgrade-cost {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9em;
-  margin-top: 4px;
-  font-weight: bold;
-  text-shadow: 1px 1px 6px #000, 0 0 8px #fff7;
-}
-.upgrade-cost .cost-coin {
-  color: #ffd700;
-  font-size: 1.1em;
-  margin-right: 3px;
-  margin-left: 2px;
-}
-.upgrade-cost .cost-gem {
-  color: #4fd2ff;
-  font-size: 1.1em;
-  margin-right: 3px;
-  margin-left: 2px;
-}
-
-.hex-tile.locked {
-  background: #444b5a;
-  color: #888;
-  filter: grayscale(0.7);
-  position: relative;
-}
-.hex-tile.locked .upgrade-title,
-.hex-tile.locked .upgrade-cost {
-  color: #888 !important;
-  text-shadow: none !important;
-  filter: grayscale(1);
-}
-.hex-tile.locked .cost-coin {
-  color: #888 !important;
-}
-.hex-tile.locked .lock-icon {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
   font-size: 1.4em;
   color: #ff5252;
   pointer-events: none;
   transition: opacity 0.5s;
   opacity: 1;
 }
+
 .hex-tile.unlocked .lock-icon {
   opacity: 0;
   animation: unlock-pop 0.6s ease;
 }
+
 @keyframes unlock-pop {
   0% { opacity: 1; transform: translate(-50%, -16px) scale(1.2); }
   80% { opacity: 1; transform: translate(-50%, 0px) scale(1.1); }
   100% { opacity: 0; transform: translate(-50%, 0px) scale(0.8); }
 }
 
-.upgrade-purchase-btn {
-  margin-top: 0.7em;
-  font-family: 'Press Start 2P', Arial, sans-serif;
-  font-size: 0.7em;
-  padding: 0.4em 1em;
-  border: 2px solid #ffd700;
-  border-radius: 0;
-  background: #23283a;
-  color: #fff;
-  box-shadow: 2px 2px 0 #181c24;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s;
-}
-.upgrade-purchase-btn.red {
-  color: #fff;
-  background: #b12b2b;
-  border-color: #b12b2b;
-}
-.upgrade-purchase-btn.white {
-  color: #fff;
-  background: #23283a;
-  border-color: #ffd700;
-}
-.upgrade-purchase-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* ===========================
+   SHINY EFFECTS
+=========================== */
 .shiny-glow {
   font-weight: bold;
   background: linear-gradient(90deg, #ff5e62, #ff9966, #f9d423, #23d160, #38a1db, #9b59b6, #ff5e62 60%);
@@ -641,6 +407,7 @@ main {
   margin-left: 1em;
   transition: background 0.2s, color 0.2s, opacity 0.2s;
 }
+
 .shiny-craft-btn:disabled {
   border-color: #666;
   color: #666;
@@ -649,36 +416,17 @@ main {
   cursor: not-allowed;
 }
 
-.character-img {
-  width: 120px;
-  height: auto;
-  margin-bottom: 1em;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  border: 4px solid #181c24;
-  box-shadow: 0 0 0 4px #23283a;
-  border-radius: 0;
-}
-
-#fishing-status {
-  font-size: 1.1em;
-  margin-bottom: 0.5em;
-}
-
-#fish-caught {
-  font-size: 1.2em;
-  font-weight: bold;
-}
-
-/* Material Checkbox Styles */
+/* ===========================
+   MATERIAL CHECKBOX
+=========================== */
 .material-checkbox {
   display: flex;
   align-items: center;
-  font-size: 16px;
+  font-size: 0.85em;
   color: #777777;
   cursor: pointer;
   font-family: 'Press Start 2P', Arial, sans-serif;
-  font-size: 0.85em;
+  position: relative;
 }
 
 .material-checkbox input[type="checkbox"] {
@@ -729,20 +477,9 @@ main {
   cursor: not-allowed;
 }
 
-.material-checkbox input[type="checkbox"]:disabled ~ .checkmark:hover {
-  border-color: #4d4d4d;
-}
-
-@keyframes secret-pulse {
-  0% { text-shadow: 0 0 8px #00bcd4, 0 0 12px #00bcd4; }
-  50% { text-shadow: 0 0 16px #00bcd4, 0 0 24px #00bcd4; }
-  100% { text-shadow: 0 0 8px #00bcd4, 0 0 12px #00bcd4; }
-}
-
-.material-checkbox span[style*="color: #00bcd4"] {
-  animation: secret-pulse 3.5s ease-in-out infinite;
-}
-
+/* ===========================
+   RECENT FISH
+=========================== */
 .recent-fish-entry {
   font-family: 'Press Start 2P', Arial, sans-serif;
   color: #fffbe7;
@@ -761,7 +498,6 @@ main {
 #recent-fish-container {
   width: 210px;
   min-height: 2em;
-  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -769,6 +505,9 @@ main {
   overflow: visible;
 }
 
+/* ===========================
+   ANIMATIONS
+=========================== */
 #main-fish-img.pulse {
   animation: fish-pulse 0.45s cubic-bezier(.4,2,.6,1);
 }
@@ -794,6 +533,9 @@ main {
   transition: transform 0.2s;
 }
 
+/* ===========================
+   SCROLLBAR STYLE
+=========================== */
 .style-7::-webkit-scrollbar-track {
   -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
   background: linear-gradient(135deg, rgba(35, 40, 58, 0.4), rgba(35, 40, 58, 0.2));
@@ -816,4 +558,74 @@ main {
                     color-stop(0.44, rgb(122,153,217)),
                     color-stop(0.72, rgb(73,125,189)),
                     color-stop(0.86, rgb(28,58,148)));
+}
+
+/* ===========================
+   RESPONSIVE / MOBILE
+=========================== */
+@media (max-width: 1024px) {
+  main { max-width: 80vw; }
+}
+
+@media (max-width: 768px) {
+  main {
+    width: 95%;
+    margin: 1em auto;
+    padding: 1em;
+  }
+
+  .tab-btn {
+    font-size: 0.9em;
+    padding: 0.4em 0.8em;
+  }
+
+  .character-img { width: 100px; }
+}
+
+@media (max-width: 500px) {
+  .inventory-table, .upgrade-table {
+    font-size: 0.75em;
+    min-width: 280px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .inventory-table th, .inventory-table td,
+  .upgrade-table th, .upgrade-table td {
+    padding: 0.3em 0.4em;
+  }
+
+  .tab-btn { font-size: 0.8em; padding: 0.3em 0.6em; }
+  .character-img { width: 80px; }
+  .hex-tile { font-size: 1.5em; }
+  #recent-fish-container { width: 180px; }
+}
+
+@media (max-width: 360px) {
+  .character-img { width: 70px; }
+  .hex-tile { font-size: 1.2em; }
+  #recent-fish-container { width: 150px; }
+}
+
+@media (max-width: 500px) {
+  .navbar {
+    flex-direction: column;
+    gap: 0.2em;
+    align-items: stretch;
+  }
+
+  .tab-btn {
+    font-size: 0.75em;
+    padding: 0.4em 0.6em;
+    border-radius: 0;
+    text-align: center;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .tab-btn.active {
+    border-left: 3px solid #00bcd4;
+    background: #292f43;
+    color: #00bcd4;
+  }
 }
