@@ -582,7 +582,32 @@ main {
   .character-img { width: 100px; }
 }
 
-/* Mobile: hide counters and stats */
+@media (max-width: 500px) {
+  .inventory-table, .upgrade-table {
+    font-size: 0.75em;
+    min-width: 280px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .inventory-table th, .inventory-table td,
+  .upgrade-table th, .upgrade-table td {
+    padding: 0.3em 0.4em;
+  }
+
+  .tab-btn { font-size: 0.8em; padding: 0.3em 0.6em; }
+  .character-img { width: 80px; }
+  .hex-tile { font-size: 1.5em; }
+  #recent-fish-container { width: 180px; }
+}
+
+@media (max-width: 360px) {
+  .character-img { width: 70px; }
+  .hex-tile { font-size: 1.2em; }
+  #recent-fish-container { width: 150px; }
+}
+
+/* Hide all counters and stats on small screens */
 @media (max-width: 600px) {
   #xp-bar,
   #coin-count,
@@ -594,23 +619,23 @@ main {
     display: none !important;
   }
 
-  /* Optional: shrink navbar or buttons for mobile */
+  /* Keep scrolling navbar */
   .navbar > div {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    overflow-x: auto;
     gap: 0.3em;
+    scrollbar-width: thin;
   }
 
   .navbar .tab-btn {
-    width: 100%;
-    text-align: center;
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0.5em 0.7em;
     font-size: 0.75em;
-    padding: 0.5em 0;
   }
 
   #settings-btn {
-    position: static;
-    margin-top: 0.5em;
-    width: 100%;
+    flex: 0 0 auto;
+    margin-left: 0.5em;
   }
 }
