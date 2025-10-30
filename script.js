@@ -717,7 +717,13 @@ function autoCatchFish() {
 
   elements.fishingStatus.innerHTML = `
     Auto-caught <span style="color:${rarity.color}">${fishName}</span>!
-    <br><span style="color:#ffd700; font-size:0.8em;">+${rupees} 💎 +${xp} XP (75%)</span>
+    <br>
+    <span style="color:#ffd700; font-size:0.8em; display:inline-flex; align-items:center; gap:4px;">
+      +${rupees}
+      <img src="assets/coin.png" alt="Rupee" style="height:14px; vertical-align:middle;">
+      <img src="assets/gem.png" alt="Gem" style="height:14px; vertical-align:middle;">
+      +${xp} <span style="color:#4db8ff;">XP (75%)</span>
+    </span>
   `;
 
   checkAchievements();
@@ -1088,19 +1094,21 @@ function updateUpgradesTab() {
     const romanNumerals = ['I', 'II', 'III'];
     const displayName = up.max > 1 && up.level < up.max ? `${up.name} ${romanNumerals[up.level]}` : up.name;
     
-    div.innerHTML = `
-      <div>
-        <div style="font-size: 1.2em; margin-bottom: 0.3em;">${displayName}</div>
-        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 0.5em;">${up.desc}</div>
-        <div style="color: ${isMaxed ? '#23d160' : '#ffd700'}; font-size: 0.9em;">
-          ${isMaxed ? 'MAX LEVEL' : `Cost: ${formatNumber(up.cost)} 💎`}
-        </div>
+  div.innerHTML = `
+    <div>
+      <div style="font-size: 1.2em; margin-bottom: 0.3em;">${displayName}</div>
+      <div style="color: #aaa; font-size: 0.85em; margin-bottom: 0.5em;">${up.desc}</div>
+      <div style="color: ${isMaxed ? '#23d160' : '#ffd700'}; font-size: 0.9em; display:flex; align-items:center; gap:4px;">
+        ${isMaxed
+          ? 'MAX LEVEL'
+          : `Cost: ${formatNumber(up.cost)} <img src="assets/gem.png" alt="Gem" style="height:14px; vertical-align:middle;">`}
       </div>
-      <button class="pixel-btn" ${isMaxed || !canAfford ? 'disabled' : ''} 
-        style="padding: 0.8em 1.5em; background: ${isMaxed ? '#666' : canAfford ? '#23d160' : '#666'};">
-        ${isMaxed ? 'Maxed' : canAfford ? 'Buy' : 'Locked'}
-      </button>
-    `;
+    </div>
+    <button class="pixel-btn" ${isMaxed || !canAfford ? 'disabled' : ''} 
+      style="padding: 0.8em 1.5em; background: ${isMaxed ? '#666' : canAfford ? '#23d160' : '#666'};">
+      ${isMaxed ? 'Maxed' : canAfford ? 'Buy' : 'Locked'}
+    </button>
+  `;
     
     const btn = div.querySelector('button');
     if (!isMaxed && canAfford) {
