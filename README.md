@@ -18,7 +18,7 @@ A browser-based Legend of Zelda inspired fishing idle game.
 - [X] Achievements System
 - [X] Currency & Items Update
 - [X] Triforce & Special Items
-- [X] Fishing Mechanics
+- [X] Fishing Mechanics (Bye bye autoclicking! 😢)
 - [X] Lures & Consumables
 - [X] Upgrades & Stats
 - [X] Inventory, Shop & Index
