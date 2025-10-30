@@ -563,10 +563,13 @@ main {
 /* ===========================
    RESPONSIVE / MOBILE
 =========================== */
+
+/* Medium screens */
 @media (max-width: 1024px) {
   main { max-width: 80vw; }
 }
 
+/* Smaller tablets */
 @media (max-width: 768px) {
   main {
     width: 95%;
@@ -582,6 +585,7 @@ main {
   .character-img { width: 100px; }
 }
 
+/* Small screens */
 @media (max-width: 500px) {
   .inventory-table, .upgrade-table {
     font-size: 0.75em;
@@ -599,27 +603,49 @@ main {
   .character-img { width: 80px; }
   .hex-tile { font-size: 1.5em; }
   #recent-fish-container { width: 180px; }
+
+  /* Inventory & Index search bar stacked for mobile */
+  .inventory-search {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4em;
+  }
+
+  .inventory-search input,
+  .inventory-search button {
+    width: 100%;
+    font-size: 0.75em;
+    padding: 0.5em;
+  }
+
+  /* Filter checkboxes wrap better */
+  .inventory-filters {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5em;
+  }
+
+  .inventory-filters label {
+    flex: 0 0 auto;
+    font-size: 0.75em;
+  }
 }
 
+/* Extra small screens */
 @media (max-width: 360px) {
   .character-img { width: 70px; }
   .hex-tile { font-size: 1.2em; }
   #recent-fish-container { width: 150px; }
 }
 
-/* Hide all counters and stats on small screens */
+/* Hide side counters and stats on mobile */
 @media (max-width: 600px) {
-  #xp-bar,
-  #coin-count,
-  #gem-count,
-  #lifetime-fish-container,
-  #luck-container,
-  #shiny-pull-container,
-  #reel-speed-container {
+  #side-counters > div {
     display: none !important;
   }
 
-  /* Keep scrolling navbar */
+  /* Keep navbar scrollable */
   .navbar > div {
     flex-direction: row;
     overflow-x: auto;
