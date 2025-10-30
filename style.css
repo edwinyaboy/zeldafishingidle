@@ -645,13 +645,14 @@ main {
     display: none !important;
   }
 
-  /* Keep navbar scrollable */
+  /* Keep navbar scrollable, reserve space for settings */
   .navbar > div {
     flex-direction: row;
     overflow-x: auto;
     gap: 0.3em;
+    padding-right: 4em; /* make room for fixed settings button */
     scrollbar-width: thin;
-    padding-right: 3em; /* reserve space for last tab (Shop) */
+    position: relative;
   }
 
   .navbar .tab-btn {
@@ -661,11 +662,13 @@ main {
     font-size: 0.75em;
   }
 
-  /* Fixed settings button on right */
+  /* Fixed settings button on the right */
   #settings-btn {
     position: absolute;
-    right: 0;
+    right: 0.5em;
     top: 50%;
     transform: translateY(-50%);
+    flex: 0 0 auto;
+    z-index: 1000; /* ensure above navbar */
   }
 }
