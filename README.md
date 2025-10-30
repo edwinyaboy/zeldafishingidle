@@ -11,6 +11,10 @@ A browser-based Legend of Zelda inspired fishing idle game.
 
 **Download Now:** [https://github.com/edwinyaboy/zeldafishingidle/releases/](https://github.com/edwinyaboy/zeldafishingidle/releases/)
 
+**Current SHA-256 Checksum**: 3bb471145a5deed85d135bff4fa9ffb3c8c5c4263832ac222fdad164bbe262a3
+
+---
+
 ⚠️ **Still in development — expect bugs!** Please report issues or suggestions.
 
 ---
